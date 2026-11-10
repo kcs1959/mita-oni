@@ -1,4 +1,4 @@
-// backend/src/protocol.rs と同じ形を保つこと
+// backend/src/protocol.ts と同じ形を保つこと
 
 export type Role = 'oni' | 'runner'
 export type Dir = 'up' | 'down' | 'left' | 'right'

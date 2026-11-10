@@ -1,13 +1,17 @@
 {
   "name": "mita-oni-backend",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit",
     "db:migrate:local": "wrangler d1 migrations apply mita-oni --local",
     "db:migrate:remote": "wrangler d1 migrations apply mita-oni --remote",
     "deploy": "npm --prefix ../frontend run build && wrangler deploy"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261110.1",
+    "typescript": "~5.9.0",
     "wrangler": "^4.159.0"
   }
 }
