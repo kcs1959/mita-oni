@@ -1,0 +1,27 @@
+name = "mita-oni"
+main = "build/index.js"
+compatibility_date = "2026-01-01"
+
+[build]
+command = "cargo install -q worker-build && worker-build --release"
+
+# フロントエンドのビルド成果物を同じ Worker から配信する（同一オリジンになるので CORS 不要）
+# /api/* だけを Rust 側で処理し、それ以外は静的アセット。未知のパスは index.html を返す（SPA）
+[assets]
+directory = "../frontend/dist"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[durable_objects]
+bindings = [{ name = "GAME", class_name = "GameServer" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GameServer"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mita-oni"
+# 本番デプロイ時は `wrangler d1 create mita-oni` で発行された ID に置き換える（ローカル開発ではこのままで動く）
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"

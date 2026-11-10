@@ -1,0 +1,13 @@
+{
+  "name": "mita-oni-backend",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "db:migrate:local": "wrangler d1 migrations apply mita-oni --local",
+    "db:migrate:remote": "wrangler d1 migrations apply mita-oni --remote",
+    "deploy": "npm --prefix ../frontend run build && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.159.0"
+  }
+}
