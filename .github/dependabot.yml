@@ -1,0 +1,28 @@
+# Dependabot による依存パッケージの更新。
+# frontend/ と backend/ で別々の npm プロジェクトなので、それぞれ監視する。
+# GitHub Actions のワークフローは無いので npm のみ。
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    # マイナー・パッチ更新は 1 件の PR にまとめて PR を増やさない。メジャー更新は個別 PR
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
