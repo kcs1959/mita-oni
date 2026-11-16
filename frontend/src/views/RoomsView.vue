@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { wsUrl } from '../lib/api'
+import PageNav from '../components/PageNav.vue'
 import { mmss, roomNo } from '../lib/format'
 import type { RoomStatus, RoomView, ServerMsg } from '../lib/protocol'
 
@@ -61,6 +62,7 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="screen rooms">
+    <PageNav />
     <header>
       <span class="step">ライブ状況</span>
       <h1>ルーム一覧</h1>

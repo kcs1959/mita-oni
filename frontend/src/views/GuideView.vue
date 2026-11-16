@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { createMazeGame } from '../game/MazeScene'
+import PageNav from '../components/PageNav.vue'
 
 const canvasHost = ref<HTMLDivElement>()
 let preview: ReturnType<typeof createMazeGame> | undefined
@@ -20,6 +21,7 @@ onBeforeUnmount(() => preview?.game.destroy(true))
 
 <template>
   <main class="screen guide">
+    <PageNav />
     <header><span class="step">遊び方</span><h1>三田のマップ</h1><p class="page-description">名所を目印に、迷路を駆け抜けよう。</p></header>
     <div ref="canvasHost" class="map" role="img" aria-label="三田の迷路マップ。東京タワー、田町駅、三田二郎を目印に移動できます。" />
     <div class="legend"><span class="chip runner">◇ 逃げ</span><span class="chip oni">▲ 鬼</span><span class="chip muted">■ 壁</span></div>

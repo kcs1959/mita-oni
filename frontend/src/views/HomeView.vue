@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import routeArt from '../assets/figma/route-home.svg'
 import Mascot from '../components/Mascot.vue'
+import PageNav from '../components/PageNav.vue'
 import { getName, setName } from '../lib/session'
 
 const router = useRouter()
@@ -18,6 +19,7 @@ function start() {
 
 <template>
   <main class="screen home">
+    <PageNav />
     <section class="panel route-panel brand" aria-label="MITA ONI 三田の街で、鬼ごっこ。">
       <img class="route-art" :src="routeArt" alt="" />
       <span class="chip festival">KCS × 三田祭 2026</span>
@@ -31,7 +33,7 @@ function start() {
       <label for="player-name">プレイヤー名</label>
       <input id="player-name" v-model="name" maxlength="12" autocomplete="nickname" placeholder="なまえ" />
       <button class="btn btn-primary" type="submit" :disabled="!canStart">対戦をはじめる</button>
-      <RouterLink class="btn btn-secondary" to="/how-to">遊び方・マップ</RouterLink>
+      <RouterLink class="btn btn-secondary" to="/how-to">遊び方</RouterLink>
       <RouterLink class="btn btn-secondary" to="/rooms">ルーム一覧</RouterLink>
       <p class="muted support">2人対戦 ・ 1プレイ最大180秒</p>
     </form>
@@ -39,7 +41,7 @@ function start() {
 </template>
 
 <style scoped>
-.home { padding-top: max(63px, env(safe-area-inset-top)); }
+.home { padding-top: max(72px, env(safe-area-inset-top)); }
 .brand { padding: 18px 16px 40px; min-height: 363px; }
 .festival { color: var(--lime); }
 h1 { display: flex; flex-direction: column; margin: 22px 0 28px; font-size: 68px; line-height: 1.03; font-weight: 900; letter-spacing: -.04em; }
