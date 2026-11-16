@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type Phaser from 'phaser'
 import routeReady from '../assets/figma/route-ready.svg'
@@ -8,6 +8,7 @@ import radarOuter from '../assets/figma/radar-outer.svg'
 import radarMiddle from '../assets/figma/radar-middle.svg'
 import radarInner from '../assets/figma/radar-inner.svg'
 import Mascot from '../components/Mascot.vue'
+import ControlStick from '../components/ControlStick.vue'
 import { createMazeGame, type MazeScene } from '../game/MazeScene'
 import { wsUrl } from '../lib/api'
 import { mmss, mmssCs, roomNo } from '../lib/format'
@@ -38,6 +39,17 @@ let nextTapId = 0
 const game = shallowRef<{ game: Phaser.Game; scene: () => MazeScene | null }>()
 let ws: WebSocket | null = null
 let countdownTimer: number | undefined
+const mobileControls = ref(false)
+let controlMedia: MediaQueryList | undefined
+const heldKeys = new Map<string, Dir>()
+let stickDirection: Dir | null = null
+let heldDirection: Dir | null = null
+let movementTimer: number | undefined
+const KEY_DIRECTIONS: Record<string, Dir> = {
+  KeyW: 'up', KeyA: 'left', KeyS: 'down', KeyD: 'right',
+  ArrowUp: 'up', ArrowLeft: 'left', ArrowDown: 'down', ArrowRight: 'right',
+}
+const MOVE_INTERVAL_MS = 120
 
 const roleColor = computed(() => (role.value === 'oni' ? 'var(--red)' : 'var(--cyan)'))
 const progress = computed(() => Math.max(0, Math.min(1, remainingMs.value / durationMs.value)))
@@ -46,10 +58,80 @@ function send(msg: ClientMsg) {
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg))
 }
 
-// 押した瞬間（pointerdown）に 1 回だけ送る。押しっぱなしでは繰り返さないので、移動するには連打が必要
+// 画面上の矢印ボタンは従来どおり1回押すごとに1マス移動する。
 function move(dir: Dir) {
   if (phase.value === 'playing') send({ type: 'move', dir })
 }
+
+function updateMovement() {
+  const next = stickDirection ?? [...heldKeys.values()].at(-1) ?? null
+  if (next === heldDirection) return
+  clearInterval(movementTimer)
+  movementTimer = undefined
+  heldDirection = next
+  if (next && phase.value === 'playing') {
+    move(next)
+    movementTimer = window.setInterval(() => {
+      if (heldDirection) move(heldDirection)
+    }, MOVE_INTERVAL_MS)
+  }
+}
+
+function setStickDirection(dir: Dir | null) {
+  stickDirection = dir
+  updateMovement()
+}
+
+function resetMovement() {
+  heldKeys.clear()
+  stickDirection = null
+  updateMovement()
+}
+
+function onKeyDown(event: KeyboardEvent) {
+  const target = event.target
+  if (phase.value !== 'playing' || event.metaKey || event.ctrlKey || event.altKey || event.isComposing ||
+    (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select')))) return
+  const dir = KEY_DIRECTIONS[event.code]
+  if (!dir) return
+  event.preventDefault()
+  if (event.repeat || heldKeys.has(event.code)) return
+  heldKeys.set(event.code, dir)
+  updateMovement()
+}
+
+function onKeyUp(event: KeyboardEvent) {
+  if (!heldKeys.delete(event.code)) return
+  event.preventDefault()
+  updateMovement()
+}
+
+function onVisibilityChange() {
+  if (document.hidden) resetMovement()
+}
+
+function updateControlMode() {
+  mobileControls.value = controlMedia?.matches ?? false
+  resetMovement()
+}
+
+function getScreenCharacters() {
+  const current = game.value
+  const scene = current?.scene()
+  if (!current || !scene) return []
+  const bounds = current.game.canvas.getBoundingClientRect()
+  const scaleX = bounds.width / current.game.scale.gameSize.width
+  const scaleY = bounds.height / current.game.scale.gameSize.height
+  return scene.getVisibleCharacters().map((character) => ({
+    x: bounds.left + character.x * scaleX,
+    y: bounds.top + character.y * scaleY,
+    radius: character.radius * Math.max(scaleX, scaleY),
+  }))
+}
+
+watch(phase, (next) => {
+  if (next !== 'playing') resetMovement()
+})
 
 function showTap(event: PointerEvent) {
   if (phase.value !== 'playing' || event.button !== 0) return
@@ -62,6 +144,7 @@ function removeTap(id: number) {
 }
 
 function destroyGame() {
+  resetMovement()
   tapEffects.value = []
   game.value?.game.destroy(true)
   game.value = undefined
@@ -143,6 +226,13 @@ function toRanking() {
 }
 
 onMounted(() => {
+  controlMedia = window.matchMedia('(pointer: coarse)')
+  updateControlMode()
+  controlMedia.addEventListener('change', updateControlMode)
+  window.addEventListener('keydown', onKeyDown)
+  window.addEventListener('keyup', onKeyUp)
+  window.addEventListener('blur', resetMovement)
+  document.addEventListener('visibilitychange', onVisibilityChange)
   if (!name) {
     router.replace('/')
     return
@@ -151,6 +241,11 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  controlMedia?.removeEventListener('change', updateControlMode)
+  window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('keyup', onKeyUp)
+  window.removeEventListener('blur', resetMovement)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
   clearInterval(countdownTimer)
   if (ws) {
     ws.onclose = null
@@ -189,7 +284,7 @@ onBeforeUnmount(() => {
     <div class="bottom-actions"><button class="btn btn-primary" @click="leave">タイトルに戻る</button></div>
   </main>
 
-  <main v-else-if="phase === 'ready' || phase === 'playing'" class="screen play" :class="{ 'ready-phase': phase === 'ready' }">
+  <main v-else-if="phase === 'ready' || phase === 'playing'" class="screen play" :class="{ 'ready-phase': phase === 'ready', 'touch-controls': mobileControls }">
     <template v-if="phase === 'ready'">
       <header>
         <span class="step">ルーム #{{ roomNo(roomId) }}</span>
@@ -202,7 +297,7 @@ onBeforeUnmount(() => {
         <Mascot :color="roleColor" :size="106" />
         <div class="count" role="status" aria-live="polite">{{ countdown }}</div>
         <p>{{ role === 'oni' ? '逃げをできるだけ早くつかまえよう。' : `鬼につかまらず、${durationMs / 1000}秒逃げ切ろう。` }}</p>
-        <span class="muted small">方向ボタンを1回タップすると1マス移動</span>
+        <span class="muted small">{{ mobileControls ? 'スティックをスワイプして移動・指を離すと停止' : 'WASD・矢印キー、または方向ボタンで移動' }}</span>
       </section>
       <p class="countdown-note muted">カウントダウン後に自動で対戦開始</p>
     </template>
@@ -218,10 +313,15 @@ onBeforeUnmount(() => {
       <div class="tap-effects" aria-hidden="true">
         <span v-for="effect in tapEffects" :key="effect.id" class="tap-effect" :style="{ left: `${effect.x}px`, top: `${effect.y}px`, color: roleColor }" @animationend="removeTap(effect.id)" />
       </div>
+      <ControlStick v-if="phase === 'playing' && mobileControls" :get-characters="getScreenCharacters" @direction="setStickDirection" />
     </section>
-    <div v-if="phase === 'playing'" class="controls">
+    <div v-if="phase === 'playing' && mobileControls" class="stick-help">
+      <strong>スティックをスワイプして移動</strong>
+      <span class="muted small">倒した方向へ進む・指を離すと停止</span>
+    </div>
+    <div v-else-if="phase === 'playing'" class="controls">
       <strong>方向をタップして1マス移動</strong>
-      <span class="muted small">長押しでは移動しません</span>
+      <span class="muted small">WASD・矢印キーは長押しで連続移動</span>
       <div class="dpad" @contextmenu.prevent>
         <button class="key up" aria-label="上に移動" @pointerdown.prevent="move('up')" @click="(event) => { if (event.detail === 0) move('up') }">↑</button>
         <button class="key left" aria-label="左に移動" @pointerdown.prevent="move('left')" @click="(event) => { if (event.detail === 0) move('left') }">←</button>
@@ -287,6 +387,8 @@ onBeforeUnmount(() => {
 @keyframes tap-ripple { from { opacity: .9; transform: scale(.25); } to { opacity: 0; transform: scale(1.4); } }
 .controls { display: flex; flex-direction: column; gap: 6px; }
 .controls > strong { font-size: 15px; }
+.stick-help { display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.touch-controls .field { height: auto; aspect-ratio: 13 / 17; }
 .dpad { display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(2, 60px); gap: 8px; justify-content: center; touch-action: none; user-select: none; -webkit-user-select: none; }
 .key { border-radius: 19px; border: 1px solid var(--edge); box-shadow: var(--raised); background: var(--panel); color: var(--text); font-size: 28px; font-weight: 700; -webkit-touch-callout: none; }
 .key:active { background: var(--lime); color: var(--bg); box-shadow: var(--inset); }
@@ -298,9 +400,15 @@ onBeforeUnmount(() => {
 .result-record { display: flex; flex-direction: column; align-items: center; gap: 10px; min-height: 133px; padding: 16px; margin-top: 24px; border-radius: 18px; font-size: 15px; }
 .result-record strong { font-size: 42px; line-height: 1.4; font-weight: 900; font-variant-numeric: tabular-nums; }
 @media (min-width: 900px) {
-  .play:not(.ready-phase) { width: min(100%, 1100px); display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-rows: auto 1fr; column-gap: 40px; height: 100svh; }
-  .play:not(.ready-phase) .field { grid-column: 1; grid-row: 1 / 3; height: 100%; min-height: 440px; }
+  .play:not(.ready-phase):not(.touch-controls) { width: min(100%, 1100px); display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-rows: auto 1fr; column-gap: 40px; height: 100svh; }
+  .play:not(.ready-phase):not(.touch-controls) .field { grid-column: 1; grid-row: 1 / 3; height: 100%; min-height: 440px; }
   .hud { grid-column: 2; grid-row: 1; }.controls { grid-column: 2; grid-row: 2; justify-content: end; padding-bottom: 8px; }
   .dpad { grid-template-columns: repeat(3, 88px); grid-template-rows: repeat(2, 88px); gap: 12px; margin-top: 18px; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .play.touch-controls:not(.ready-phase) { width: min(100%, 900px); height: 100svh; padding: 16px max(24px, env(safe-area-inset-right)) 16px max(24px, env(safe-area-inset-left)); display: grid; grid-template-columns: minmax(0, 1fr) minmax(160px, 220px); grid-template-rows: auto 1fr; gap: 16px 24px; }
+  .play.touch-controls:not(.ready-phase) .field { grid-column: 1; grid-row: 1 / 3; height: 100%; min-height: 0; width: auto; max-width: 100%; justify-self: center; }
+  .touch-controls .hud { grid-column: 2; grid-row: 1; gap: 8px; }
+  .touch-controls .stick-help { grid-column: 2; grid-row: 2; align-self: end; }
 }
 </style>
