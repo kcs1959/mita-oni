@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchRanking } from '../lib/api'
+import PageNav from '../components/PageNav.vue'
 import { mmssCs } from '../lib/format'
 import type { RankingResponse, Role } from '../lib/protocol'
 import { getName } from '../lib/session'
@@ -56,6 +57,7 @@ function replay() {
 
 <template>
   <main class="screen ranking">
+    <PageNav />
     <header>
       <span class="step">対戦記録</span>
       <h1>ランキング</h1>
