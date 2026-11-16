@@ -2,6 +2,7 @@ import { normalizeName } from './game'
 import { send } from './protocol'
 import { handleRanking } from './ranking'
 
+// Durable Objects
 export { LobbyDO } from './lobby'
 export { RoomDO } from './room'
 

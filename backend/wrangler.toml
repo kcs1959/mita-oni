@@ -1,6 +1,6 @@
 name = "mita-oni"
 main = "src/index.ts"
-compatibility_date = "2026-01-01"
+compatibility_date = "2026-11-15"
 
 # フロントエンドのビルド成果物を同じ Worker から配信する（同一オリジンになるので CORS 不要）
 # /api/* だけを Worker 側で処理し、それ以外は静的アセット。未知のパスは index.html を返す（SPA）
@@ -22,6 +22,5 @@ new_sqlite_classes = ["RoomDO", "LobbyDO"]
 [[d1_databases]]
 binding = "DB"
 database_name = "mita-oni"
-# 本番デプロイ時は `wrangler d1 create mita-oni` で発行された ID に置き換える（ローカル開発ではこのままで動く）
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "1778c03b-8ec7-41ce-b4ab-36851e356723"
 migrations_dir = "migrations"
