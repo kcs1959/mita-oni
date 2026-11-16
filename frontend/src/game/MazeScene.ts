@@ -65,6 +65,13 @@ export class MazeScene extends Phaser.Scene {
     }
   }
 
+  /** 補間後の描画位置。視界外の相手は操作UIにも渡さない。 */
+  getVisibleCharacters() {
+    return [this.me, this.opp]
+      .filter((character) => character?.visible)
+      .map((character) => ({ x: character.x, y: character.y, radius: CELL * 0.52 }))
+  }
+
   update(_time: number, delta: number) {
     const t = 1 - Math.exp((-FOLLOW_RATE * delta) / 1000)
     for (const [obj, to] of [
