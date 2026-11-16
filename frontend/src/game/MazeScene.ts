@@ -7,6 +7,7 @@ export interface MazeSceneData {
   role: Role
   you: Cell
   opp: Cell
+  preview?: boolean
 }
 
 /** サーバーの 30Hz 更新の間を、描画の 60fps で補間して滑らかに動かすための係数（1 秒あたり） */
@@ -46,6 +47,8 @@ export class MazeScene extends Phaser.Scene {
     this.me = this.makeCharacter(role)
     this.setPositions(this.data0.you, this.data0.opp, true)
 
+    if (this.data0.preview) return
+
     this.fog = this.add.image(0, 0, this.makeFogTexture(maze)).setDepth(10)
     this.ring = this.add.graphics().setDepth(11)
     this.ring.lineStyle(2.7, COLORS.ring, 1).strokeCircle(0, 0, VISION_RADIUS_PX)
@@ -72,6 +75,8 @@ export class MazeScene extends Phaser.Scene {
       if (dist > CELL * SNAP_CELLS || dist < 0.5) obj.setPosition(to.x, to.y)
       else obj.setPosition(obj.x + (to.x - obj.x) * t, obj.y + (to.y - obj.y) * t)
     }
+
+    if (this.data0.preview) return
 
     // 霧と視界の輪を自分と一緒に動かす（プレイヤー + 外円ごと移動）
     this.fog.setPosition(this.me.x, this.me.y)
@@ -108,18 +113,18 @@ export class MazeScene extends Phaser.Scene {
       const y = m.y * CELL
       const w = m.w * CELL
       const h = m.h * CELL
-      const g = this.add.graphics().setAlpha(0.6)
+      const g = this.add.graphics().setAlpha(this.data0.preview ? 1 : 0.6)
       g.fillStyle(COLORS.landmarkBg, 1).fillRoundedRect(x, y, w, h, 12)
       g.fillStyle(m.color, 1).fillRoundedRect(x + 7, y + 7, w - 14, 4, 2)
       const color = `#${m.color.toString(16).padStart(6, '0')}`
       this.add
         .text(x + w / 2, y + h * 0.42, m.icon, { fontFamily: 'Noto Sans JP', fontSize: '20px', fontStyle: 'bold', color })
         .setOrigin(0.5)
-        .setAlpha(0.75)
+        .setAlpha(this.data0.preview ? 1 : 0.75)
       this.add
         .text(x + w / 2, y + h * 0.75, m.label, { fontFamily: 'Noto Sans JP', fontSize: '14px', fontStyle: 'bold', color: COLORS.text })
         .setOrigin(0.5)
-        .setAlpha(0.75)
+        .setAlpha(this.data0.preview ? 1 : 0.75)
     }
   }
 

@@ -55,180 +55,58 @@ function replay() {
 </script>
 
 <template>
-  <main class="screen">
-    <span class="step">08 / LEADERBOARD</span>
-    <div class="wrap">
-      <h1>殿堂入りランキング</h1>
-      <p class="muted desc">速い鬼と逃げ上手は誰だ？</p>
-
-      <div class="tabs">
-        <button class="chip tab" :class="{ on: tab === 'oni' }" @click="tab = 'oni'">プロ鬼</button>
-        <button class="chip tab" :class="{ on: tab === 'runner' }" @click="tab = 'runner'">プロ逃げ</button>
-      </div>
-
-      <div class="panel info">
-        <div class="metric">順位はプレイ時間が短い順</div>
-        <div v-if="tab === 'oni'" class="muted hint">is鬼 = true / プロ鬼</div>
-      </div>
-
-      <p v-if="error" class="muted">ランキングを読み込めませんでした。</p>
-      <ol v-else-if="data" class="rows">
-        <li v-if="data.entries.length === 0" class="muted empty">まだ記録がありません</li>
-        <li v-for="(e, i) in data.entries" :key="e.id" class="row" :class="{ me: e.id === meForTab }">
-          <span v-if="e.id === meForTab" class="here">あなたはここ！</span>
-          <span class="rank">{{ data.offset + i + 1 }}</span>
-          <span class="name">{{ e.name }}</span>
-          <span class="time">{{ mmssCs(e.playTimeMs) }}</span>
-        </li>
-      </ol>
-
-      <div v-if="data" class="pager muted">
-        <button class="link" :disabled="!hasPrev" @click="prev">‹ 前の7人</button>
-        <span>{{ pageLabel }}</span>
-        <button class="link" :disabled="!hasNext" @click="next">次の7人 ›</button>
-      </div>
-
-      <div class="actions">
-        <button class="btn btn-panel" @click="router.push('/rooms')">ルーム一覧を見る</button>
-        <button class="btn btn-primary" @click="replay">もう1度あそぶ ↻</button>
-      </div>
+  <main class="screen ranking">
+    <header>
+      <span class="step">対戦記録</span>
+      <h1>ランキング</h1>
+      <p class="page-description">殿堂入り ・ 自分の順位と記録</p>
+    </header>
+    <div class="segments" role="group" aria-label="ランキングの役割">
+      <button class="segment" :class="{ on: tab === 'oni' }" :aria-pressed="tab === 'oni'" @click="tab = 'oni'">プロ鬼</button>
+      <button class="segment" :class="{ on: tab === 'runner' }" :aria-pressed="tab === 'runner'" @click="tab = 'runner'">プロ逃げ</button>
+    </div>
+    <div class="table-heading muted"><span>順位 / プレイヤー</span><span>{{ tab === 'oni' ? '捕獲タイム' : '生存時間' }}</span></div>
+    <div v-if="error" class="inset-list empty-state" role="alert">
+      <p>ランキングを読み込めませんでした。</p>
+      <button class="btn btn-secondary" @click="load()">もう一度読み込む</button>
+    </div>
+    <ol v-else-if="data" class="inset-list rows" aria-label="ランキング">
+      <li v-if="data.entries.length === 0" class="empty-state">まだ記録がありません</li>
+      <li v-for="(e, i) in data.entries" :key="e.id" class="row" :class="{ me: e.id === meForTab }">
+        <span class="rank">{{ data.offset + i + 1 }}</span>
+        <span class="player"><span class="name">{{ e.name }}</span><span v-if="e.id === meForTab" class="here">あなた</span></span>
+        <span class="time">{{ mmssCs(e.playTimeMs) }}</span>
+      </li>
+    </ol>
+    <p v-else class="inset-list empty-state" role="status">ランキングを読み込んでいます…</p>
+    <p v-if="data" class="page-label muted">{{ pageLabel }} ・ プレイ時間が短い順</p>
+    <nav v-if="data && (hasPrev || hasNext)" class="pager" aria-label="ランキングのページ">
+      <button class="link" :disabled="!hasPrev" @click="prev">‹ 前の7人</button>
+      <button class="link" :disabled="!hasNext" @click="next">次の7人 ›</button>
+    </nav>
+    <div class="bottom-actions">
+      <button class="btn btn-secondary" @click="router.push('/rooms')">ルーム一覧</button>
+      <button class="btn btn-primary" @click="replay">もう一度あそぶ</button>
     </div>
   </main>
 </template>
 
 <style scoped>
-.wrap {
-  width: min(720px, 100%);
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-h1 {
-  margin: 16px 0 0;
-  font-size: 36px;
-}
-
-.desc {
-  margin: 0;
-}
-
-.tabs {
-  display: flex;
-  gap: 12px;
-}
-
-.tab {
-  color: var(--text);
-  padding: 10px 20px;
-}
-
-.tab.on {
-  background: var(--lime);
-  color: var(--bg);
-}
-
-.info {
-  padding: 16px 20px;
-  border-radius: 15px;
-}
-
-.metric {
-  font-weight: 700;
-}
-
-.hint {
-  font-size: 13px;
-  margin-top: 4px;
-}
-
-.rows {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.row {
-  position: relative;
-  display: grid;
-  grid-template-columns: 56px 1fr auto;
-  align-items: center;
-  height: 52px;
-  padding: 0 20px;
-  border-radius: 11px;
-  background: var(--panel);
-  font-weight: 700;
-}
-
-.row.me {
-  background: var(--lime);
-  color: var(--bg);
-  margin-top: 14px;
-}
-
-.rank {
-  color: var(--muted);
-}
-
-.time {
-  color: var(--muted);
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-}
-
-.row.me .rank,
-.row.me .time {
-  color: var(--bg);
-}
-
-.here {
-  position: absolute;
-  top: -15px;
-  left: 30%;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: var(--yellow);
-  color: var(--bg);
-  font-size: 12px;
-}
-
-.empty {
-  padding: 24px;
-  text-align: center;
-}
-
-.pager {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.link {
-  background: none;
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.link:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-.actions {
-  display: flex;
-  gap: 16px;
-  padding: 16px;
-  border-radius: 23px;
-  background: var(--panel-deep);
-}
-
-.actions .btn {
-  height: 52px;
-}
+.page-description { margin-bottom: 14px; }
+.table-heading { display: flex; justify-content: space-between; padding: 16px 14px 10px; font-size: 13px; font-weight: 700; }
+.rows { min-height: 343px; }
+.row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 49px; border-bottom: 1px solid var(--edge); font-weight: 700; }
+.row:last-child { border-bottom: 0; }
+.rank { color: var(--muted); font-size: 15px; }
+.player { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; }
+.time { font-size: 16px; font-variant-numeric: tabular-nums; }
+.row.me { background: var(--panel); margin: 0 -14px; padding: 0 14px; border-radius: 10px; border-color: transparent; }
+.row.me .rank, .here { color: var(--lime); }
+.here { font-size: 12px; flex: none; }
+.page-label { text-align: center; font-size: 14px; margin: 16px 0 0; }
+.pager { display: flex; justify-content: space-between; margin-top: 8px; }
+.link { color: var(--text); background: transparent; padding: 12px 4px; min-height: 44px; font-size: 14px; }
+.link:disabled { opacity: .35; cursor: default; }
+.bottom-actions .btn-secondary { min-height: 46px; }
 </style>
