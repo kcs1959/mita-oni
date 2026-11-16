@@ -32,6 +32,7 @@ function start() {
       <input id="player-name" v-model="name" maxlength="12" autocomplete="nickname" placeholder="なまえ" />
       <button class="btn btn-primary" type="submit" :disabled="!canStart">対戦をはじめる</button>
       <RouterLink class="btn btn-secondary" to="/how-to">遊び方・マップ</RouterLink>
+      <RouterLink class="btn btn-secondary" to="/rooms">ルーム一覧</RouterLink>
       <p class="muted support">2人対戦 ・ 1プレイ最大180秒</p>
     </form>
   </main>
