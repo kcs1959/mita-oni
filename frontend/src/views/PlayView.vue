@@ -28,6 +28,8 @@ const elapsedMs = ref(0)
 const recordId = ref<number | null>(null)
 
 const canvasHost = ref<HTMLDivElement>()
+const tapEffects = ref<{ id: number; x: number; y: number }[]>([])
+let nextTapId = 0
 const game = shallowRef<{ game: Phaser.Game; scene: () => MazeScene | null }>()
 let ws: WebSocket | null = null
 let countdownTimer: number | undefined
@@ -45,7 +47,18 @@ function move(dir: Dir) {
   if (phase.value === 'playing') send({ type: 'move', dir })
 }
 
+function showTap(event: PointerEvent) {
+  if (phase.value !== 'playing' || event.button !== 0) return
+  const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  tapEffects.value.push({ id: nextTapId++, x: event.clientX - bounds.left, y: event.clientY - bounds.top })
+}
+
+function removeTap(id: number) {
+  tapEffects.value = tapEffects.value.filter((effect) => effect.id !== id)
+}
+
 function destroyGame() {
+  tapEffects.value = []
   game.value?.game.destroy(true)
   game.value = undefined
 }
@@ -180,8 +193,17 @@ onBeforeUnmount(() => {
 
   <!-- 03 · START / 04 · プレイ中 -->
   <main v-else-if="phase === 'ready' || phase === 'playing'" class="screen play">
-    <section class="field">
+    <section class="field" @pointerdown="showTap">
       <div ref="canvasHost" class="canvas-host" />
+      <div class="tap-effects" aria-hidden="true">
+        <span
+          v-for="effect in tapEffects"
+          :key="effect.id"
+          class="tap-effect"
+          :style="{ left: `${effect.x}px`, top: `${effect.y}px`, color: roleColor }"
+          @animationend="removeTap(effect.id)"
+        />
+      </div>
       <div v-if="phase === 'ready'" class="veil">
         <div class="modal">
           <span class="chip" style="background: var(--panel-deep); color: var(--cyan)">ROOM #{{ roomNo(roomId) }} • 2/2</span>
@@ -414,6 +436,49 @@ onBeforeUnmount(() => {
 .canvas-host {
   position: absolute;
   inset: 0;
+}
+
+.tap-effects {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tap-effect {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  box-shadow: 0 0 12px currentColor;
+  animation: tap-ripple 450ms ease-out forwards;
+}
+
+@keyframes tap-ripple {
+  from {
+    opacity: 0.9;
+    transform: scale(0.25);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tap-effect {
+    animation: tap-fade 120ms linear forwards;
+  }
+}
+
+@keyframes tap-fade {
+  from {
+    opacity: 0.9;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 .veil {
