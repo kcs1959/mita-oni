@@ -4,11 +4,10 @@ import {
   GAME_DURATION_MS,
   MAX_QUEUED_INPUTS,
   MAZE,
-  ONI_SPAWN,
   ROOM_COUNT,
-  RUNNER_SPAWN,
   TICK_MS,
   isDir,
+  randomSpawns,
   samePos,
   step,
 } from './game'
@@ -58,7 +57,8 @@ export class RoomDO extends DurableObject<Env> {
 
     const { 0: client, 1: server } = new WebSocketPair()
     server.accept()
-    const player: Player = { ws: server, name, role: 'runner', pos: RUNNER_SPAWN, prev: RUNNER_SPAWN, inputs: [] }
+    // 位置と役割は 2 人そろったとき（startCountdown）に決める
+    const player: Player = { ws: server, name, role: 'runner', pos: [0, 0], prev: [0, 0], inputs: [] }
     this.players.push(player)
     server.addEventListener('message', (e) => this.onMessage(player, e.data))
     server.addEventListener('close', () => this.onLeave(player))
@@ -78,9 +78,10 @@ export class RoomDO extends DurableObject<Env> {
 
   private startCountdown() {
     const oniIndex = Math.random() < 0.5 ? 0 : 1
+    const spawns = randomSpawns()
     this.players.forEach((p, i) => {
       p.role = i === oniIndex ? 'oni' : 'runner'
-      p.pos = p.role === 'oni' ? ONI_SPAWN : RUNNER_SPAWN
+      p.pos = spawns[p.role]
       p.prev = p.pos
       p.inputs = []
     })

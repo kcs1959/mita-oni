@@ -30,10 +30,50 @@ export const MAZE = [
   '#############',
 ] as const
 
-export const RUNNER_SPAWN: Cell = [1, 1]
-export const ONI_SPAWN: Cell = [11, 15]
+/** 初期位置での鬼と逃げの最短距離（迷路を歩いたときのマス数）の下限 */
+export const MIN_SPAWN_DISTANCE = 12
 
 const DELTA: Record<Dir, Cell> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }
+
+const ROAD_CELLS: Cell[] = MAZE.flatMap((row, y) =>
+  [...row].flatMap((c, x): Cell[] => (c === '.' ? [[x, y]] : [])),
+)
+
+/** from から各通路マスまでの最短歩数（壁を通らない距離）。BFS で求める */
+function walkDistances(from: Cell): Map<string, number> {
+  const key = ([x, y]: Cell) => `${x},${y}`
+  const dist = new Map([[key(from), 0]])
+  const queue: Cell[] = [from]
+  for (let i = 0; i < queue.length; i++) {
+    const cur = queue[i]
+    const d = dist.get(key(cur))!
+    for (const dir of Object.keys(DELTA) as Dir[]) {
+      const next = step(cur, dir)
+      if (dist.has(key(next))) continue
+      dist.set(key(next), d + 1)
+      queue.push(next)
+    }
+  }
+  return dist
+}
+
+const pickRandom = <T>(items: T[]): T => items[Math.floor(Math.random() * items.length)]
+
+/**
+ * 鬼と逃げの初期位置をランダムに決める。
+ * 直線距離だと壁越しに近いだけのことがあるので、迷路を歩いたときの距離で MIN_SPAWN_DISTANCE 以上離す。
+ */
+export function randomSpawns(): { oni: Cell; runner: Cell } {
+  const runner = pickRandom(ROAD_CELLS)
+  const dist = walkDistances(runner)
+  const far = ROAD_CELLS.filter(([x, y]) => (dist.get(`${x},${y}`) ?? 0) >= MIN_SPAWN_DISTANCE)
+  if (far.length > 0) return { runner, oni: pickRandom(far) }
+  // 盤面の端に近い場所を引いて条件を満たすマスが無いときは、いちばん遠いマスにする
+  const farthest = ROAD_CELLS.reduce((best, c) =>
+    (dist.get(`${c[0]},${c[1]}`) ?? 0) > (dist.get(`${best[0]},${best[1]}`) ?? 0) ? c : best,
+  )
+  return { runner, oni: farthest }
+}
 
 export function isDir(v: unknown): v is Dir {
   return typeof v === 'string' && v in DELTA
