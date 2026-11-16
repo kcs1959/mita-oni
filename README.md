@@ -25,10 +25,10 @@ npx wrangler d1 migrations apply DB --local
 
 ```sh
 cd backend
-npm --prefix backend run dev    # Worker + Durable Object + D1 (http://localhost:8787)
+npm run dev    # Worker + Durable Object + D1 (http://localhost:8787)
 
 cd ../frontend
-npm --prefix frontend run dev   # Vite (http://localhost:5173 または 5174)
+npm run dev   # Vite (http://localhost:5173 または 5174)
 ```
 
 ブラウザで、localhostのURLを開く。
