@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import routeArt from '../assets/figma/route-home.svg'
 import Mascot from '../components/Mascot.vue'
 import { getName, setName } from '../lib/session'
 
@@ -17,163 +18,38 @@ function start() {
 
 <template>
   <main class="screen home">
-    <header class="top">
-      <span class="step">01 / WELCOME</span>
+    <section class="panel route-panel brand" aria-label="MITA ONI 三田の街で、鬼ごっこ。">
+      <img class="route-art" :src="routeArt" alt="" />
       <span class="chip festival">KCS × 三田祭 2026</span>
-    </header>
-
-    <div class="body">
-      <section class="brand">
-        <div class="stripe" />
-        <h1>
-          <span class="mita">MITA</span>
-          <span class="oni">ONI</span>
-        </h1>
-        <p class="sub">三田の街で、鬼ごっこ。</p>
-        <p class="catch muted">迷路を駆けろ。つかまるな。</p>
-        <div class="mascots">
-          <Mascot color="var(--red)" :size="56" />
-          <Mascot class="runner" color="var(--cyan)" :size="54" />
-        </div>
-      </section>
-
-      <form class="entry" @submit.prevent="start">
-        <label class="label" for="player-name">PLAYER NAME</label>
-        <input id="player-name" v-model="name" maxlength="12" autocomplete="off" placeholder="なまえ" />
-        <button class="btn btn-primary" type="submit" :disabled="!canStart">ゲームをはじめる →</button>
-        <p class="muted support">2人で対戦 • 1プレイ最大180秒</p>
-      </form>
-    </div>
-
-    <footer class="footer muted">MITA–ONI&nbsp;&nbsp;/&nbsp;&nbsp;2026</footer>
+      <h1><span>MITA</span><span class="oni">ONI</span></h1>
+      <p class="sub">三田の街で、鬼ごっこ。</p>
+      <p class="catch muted">迷路を駆けろ。つかまるな。</p>
+      <Mascot class="brand-oni" color="var(--red)" :size="68" />
+      <Mascot class="brand-runner" color="var(--cyan)" :size="48" />
+    </section>
+    <form class="entry" @submit.prevent="start">
+      <label for="player-name">プレイヤー名</label>
+      <input id="player-name" v-model="name" maxlength="12" autocomplete="nickname" placeholder="なまえ" />
+      <button class="btn btn-primary" type="submit" :disabled="!canStart">対戦をはじめる</button>
+      <RouterLink class="btn btn-secondary" to="/how-to">遊び方・マップ</RouterLink>
+      <p class="muted support">2人対戦 ・ 1プレイ最大180秒</p>
+    </form>
   </main>
 </template>
 
 <style scoped>
-.top {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
-
-.festival {
-  color: var(--lime);
-}
-
-.body {
-  flex: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 64px;
-  align-items: center;
-  max-width: 1200px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-.brand {
-  position: relative;
-  overflow: hidden;
-  background: var(--panel-deep);
-  border-radius: 27px;
-  padding: 56px 48px 40px;
-}
-
-.stripe {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 10px;
-  background: var(--lime);
-}
-
-h1 {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  line-height: 1.05;
-  font-weight: 700;
-}
-
-.mita {
-  font-size: clamp(64px, 7vw, 96px);
-}
-
-.oni {
-  font-size: clamp(70px, 8vw, 108px);
-  color: var(--lime);
-}
-
-.sub {
-  margin: 28px 0 8px;
-  font-size: clamp(20px, 2vw, 26px);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.catch {
-  margin: 0;
-  font-size: 16px;
-}
-
-.mascots {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-top: 32px;
-  padding: 0 8px;
-}
-
-.mascots .runner {
-  margin-bottom: 12px;
-}
-
-.entry {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  align-items: flex-start;
-}
-
-.label {
-  color: var(--cyan);
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.06em;
-}
-
-input {
-  width: 100%;
-  height: 68px;
-  padding: 0 24px;
-  border-radius: 16px;
-  border: 1.5px solid var(--border);
-  background: var(--panel);
-  color: var(--text);
-  caret-color: var(--lime);
-  font: inherit;
-  font-size: 20px;
-  font-weight: 700;
-  outline: none;
-}
-
-input:focus {
-  border-color: var(--lime);
-}
-
-.support {
-  margin: 0;
-  font-size: 14px;
-}
-
-.footer {
-  border-top: 1px solid var(--panel);
-  padding-top: 16px;
-  margin-top: 32px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.5em;
-  text-align: center;
-}
+.home { padding-top: max(63px, env(safe-area-inset-top)); }
+.brand { padding: 18px 16px 40px; min-height: 363px; }
+.festival { color: var(--lime); }
+h1 { display: flex; flex-direction: column; margin: 22px 0 28px; font-size: 68px; line-height: 1.03; font-weight: 900; letter-spacing: -.04em; }
+.oni { color: var(--lime); }
+.sub { font-size: 21px; font-weight: 700; margin: 0 0 16px; }
+.catch { font-size: 15px; margin: 0; }
+.brand-oni { position: absolute; right: 34px; top: 81px; }
+.brand-runner { position: absolute; right: 32px; top: 162px; }
+.entry { display: flex; flex-direction: column; margin-top: 26px; gap: 12px; }
+label { font-size: 16px; font-weight: 700; }
+input { width: 100%; min-height: 58px; padding: 14px 16px; margin: -4px 0 10px; border: 1px solid var(--edge); border-radius: 14px; background: var(--panel-deep); color: var(--text); caret-color: var(--lime); font-size: 19px; font-weight: 500; box-shadow: var(--inset); }
+.support { text-align: center; font-size: 14px; margin: 12px 0 0; }
+@media (max-width: 359px) { .brand { padding-left: 14px; } .sub { font-size: 18px; } .brand-oni { right: 12px; } .brand-runner { right: 14px; } }
 </style>

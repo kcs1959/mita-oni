@@ -2,6 +2,11 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 import type Phaser from 'phaser'
+import routeReady from '../assets/figma/route-ready.svg'
+import routeResult from '../assets/figma/route-result.svg'
+import radarOuter from '../assets/figma/radar-outer.svg'
+import radarMiddle from '../assets/figma/radar-middle.svg'
+import radarInner from '../assets/figma/radar-inner.svg'
 import Mascot from '../components/Mascot.vue'
 import { createMazeGame, type MazeScene } from '../game/MazeScene'
 import { wsUrl } from '../lib/api'
@@ -34,9 +39,8 @@ const game = shallowRef<{ game: Phaser.Game; scene: () => MazeScene | null }>()
 let ws: WebSocket | null = null
 let countdownTimer: number | undefined
 
-const roleLabel = computed(() => (role.value === 'oni' ? '鬼 / ONI' : '逃げ / RUNNER'))
 const roleColor = computed(() => (role.value === 'oni' ? 'var(--red)' : 'var(--cyan)'))
-const progress = computed(() => 1 - remainingMs.value / durationMs.value)
+const progress = computed(() => Math.max(0, Math.min(1, remainingMs.value / durationMs.value)))
 
 function send(msg: ClientMsg) {
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg))
@@ -96,6 +100,9 @@ async function onMessage(msg: ServerMsg) {
     case 'start':
       clearInterval(countdownTimer)
       phase.value = 'playing'
+      await nextTick()
+      game.value?.game.scale.getParentBounds()
+      game.value?.game.scale.refresh()
       break
     case 'state':
       remainingMs.value = msg.remainingMs
@@ -154,573 +161,146 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- 02 · マッチング -->
-  <main v-if="phase === 'connecting' || phase === 'matching'" class="screen center">
-    <span class="step">02 / MATCHING</span>
-    <div class="matching">
-      <span class="chip" style="color: var(--lime)">● ONLINE {{ occupiedRooms }} / {{ totalRooms }} ROOMS</span>
-      <h1 class="title">対戦相手を<br />探しています...</h1>
-      <div class="radar">
-        <span class="ring r1" />
-        <span class="ring r2" />
-        <span class="ring r3" />
-        <span class="beacon" />
-        <Mascot class="radar-me" color="var(--cyan)" :size="54" halo />
-      </div>
-      <div class="panel match-card">
-        <Mascot color="var(--cyan)" :size="44" halo :mouth="false" />
-        <div>
-          <div class="joined">あなた • {{ name }}</div>
-          <div class="muted small">対戦相手の参加を待っています</div>
-        </div>
-        <div class="track"><span class="bar" /></div>
-      </div>
-      <p class="muted small">自動で空いている2人ルームに入ります</p>
-      <button class="btn btn-secondary" @click="leave">マッチングをキャンセル</button>
+  <main v-if="phase === 'connecting' || phase === 'matching'" class="screen matching">
+    <header>
+      <span class="step">対戦ロビー</span>
+      <h1>対戦相手を検索中</h1>
+      <p class="page-description">空いている2人用ルームに自動で入ります。</p>
+    </header>
+    <div class="panel radar" role="status" aria-label="対戦相手を検索中">
+      <span class="chip searching">検索中</span>
+      <img class="ring" :src="radarOuter" width="234" height="234" alt="" />
+      <img class="ring" :src="radarMiddle" width="172" height="172" alt="" />
+      <img class="ring" :src="radarInner" width="110" height="110" alt="" />
+      <Mascot color="var(--cyan)" :size="90" />
     </div>
+    <div class="panel participants">
+      <div><strong class="player-name">{{ name }}</strong><span class="joined">あなた ・ 参加済み</span></div>
+      <div><strong>対戦相手</strong><span class="muted">参加を待っています</span></div>
+    </div>
+    <p class="occupancy muted">稼働中 {{ occupiedRooms }} / {{ totalRooms }} ルーム</p>
+    <div class="bottom-actions"><button class="btn btn-secondary" @click="leave">マッチングをキャンセル</button></div>
   </main>
 
-  <!-- 満室・切断 -->
-  <main v-else-if="phase === 'full' || phase === 'error'" class="screen center">
-    <div class="notice">
-      <h1 class="title">{{ phase === 'full' ? '満室です' : '接続が切れました' }}</h1>
-      <p class="muted">
-        {{ phase === 'full' ? '全てのルームが使用中です。しばらくしてからもう一度お試しください。' : 'もう一度はじめからお試しください。' }}
-      </p>
-      <button class="btn btn-primary" @click="leave">ゲームに戻る</button>
-    </div>
+  <main v-else-if="phase === 'full' || phase === 'error'" class="screen notice">
+    <span class="step">対戦ロビー</span>
+    <h1>{{ phase === 'full' ? '満室です' : '接続が切れました' }}</h1>
+    <p class="muted">{{ phase === 'full' ? '全てのルームが使用中です。しばらくしてからもう一度お試しください。' : 'もう一度はじめからお試しください。' }}</p>
+    <div class="bottom-actions"><button class="btn btn-primary" @click="leave">タイトルに戻る</button></div>
   </main>
 
-  <!-- 03 · START / 04 · プレイ中 -->
-  <main v-else-if="phase === 'ready' || phase === 'playing'" class="screen play">
-    <section class="field" @pointerdown="showTap">
+  <main v-else-if="phase === 'ready' || phase === 'playing'" class="screen play" :class="{ 'ready-phase': phase === 'ready' }">
+    <template v-if="phase === 'ready'">
+      <header>
+        <span class="step">ルーム #{{ roomNo(roomId) }}</span>
+        <h1>対戦準備</h1>
+        <p class="page-description">2人そろいました。相手：{{ opponent }}</p>
+      </header>
+      <section class="panel route-panel ready-card" :style="{ '--role-color': roleColor }">
+        <img class="route-art" :src="routeReady" alt="" />
+        <span class="chip role-chip">あなたの役割 ・ {{ role === 'oni' ? '鬼' : '逃げ' }}</span>
+        <Mascot :color="roleColor" :size="106" />
+        <div class="count" role="status" aria-live="polite">{{ countdown }}</div>
+        <p>{{ role === 'oni' ? '逃げをできるだけ早くつかまえよう。' : `鬼につかまらず、${durationMs / 1000}秒逃げ切ろう。` }}</p>
+        <span class="muted small">方向ボタンを1回タップすると1マス移動</span>
+      </section>
+      <p class="countdown-note muted">カウントダウン後に自動で対戦開始</p>
+    </template>
+
+    <div v-if="phase === 'playing'" class="hud">
+      <div class="badges"><span class="chip" :style="{ color: roleColor }">{{ role === 'oni' ? '▲ 鬼' : '◇ 逃げ' }}</span><span class="muted small">ルーム #{{ roomNo(roomId) }}</span></div>
+      <div class="timer"><strong>残り時間</strong><span class="timer-value">{{ mmss(remainingMs) }}</span></div>
+      <div class="progress" role="progressbar" aria-label="残り時間" :aria-valuenow="Math.ceil(remainingMs / 1000)" :aria-valuemax="durationMs / 1000" :aria-valuemin="0"><span :style="{ width: `${progress * 100}%` }" /></div>
+    </div>
+    <section class="field" aria-label="対戦マップ" @pointerdown="showTap">
       <div ref="canvasHost" class="canvas-host" />
+      <span class="fog-label muted">視界外</span>
       <div class="tap-effects" aria-hidden="true">
-        <span
-          v-for="effect in tapEffects"
-          :key="effect.id"
-          class="tap-effect"
-          :style="{ left: `${effect.x}px`, top: `${effect.y}px`, color: roleColor }"
-          @animationend="removeTap(effect.id)"
-        />
-      </div>
-      <div v-if="phase === 'ready'" class="veil">
-        <div class="modal">
-          <span class="chip" style="background: var(--panel-deep); color: var(--cyan)">ROOM #{{ roomNo(roomId) }} • 2/2</span>
-          <div class="ready">READY?</div>
-          <div class="count">{{ countdown }}</div>
-          <div class="assign">あなたは「{{ role === 'oni' ? '鬼' : '逃げ' }}」！</div>
-          <div class="muted small">
-            {{ role === 'oni' ? '逃げをできるだけ早くつかまえよう' : '鬼につかまらず、180秒逃げ切ろう' }}
-          </div>
-          <div class="muted tiny">3 → 2 → 1 のカウントダウン後に開始 • 相手：{{ opponent }}</div>
-        </div>
+        <span v-for="effect in tapEffects" :key="effect.id" class="tap-effect" :style="{ left: `${effect.x}px`, top: `${effect.y}px`, color: roleColor }" @animationend="removeTap(effect.id)" />
       </div>
     </section>
-
-    <aside class="hud">
-      <span class="step">{{ phase === 'ready' ? '03 / READY' : '04 / PLAYING' }}</span>
-      <div class="badges">
-        <span class="chip" :style="{ color: roleColor }">● {{ roleLabel }}</span>
-        <span class="chip">ROOM {{ roomNo(roomId) }}</span>
+    <div v-if="phase === 'playing'" class="controls">
+      <strong>方向をタップして1マス移動</strong>
+      <span class="muted small">長押しでは移動しません</span>
+      <div class="dpad" @contextmenu.prevent>
+        <button class="key up" aria-label="上に移動" @pointerdown.prevent="move('up')" @click="(event) => { if (event.detail === 0) move('up') }">↑</button>
+        <button class="key left" aria-label="左に移動" @pointerdown.prevent="move('left')" @click="(event) => { if (event.detail === 0) move('left') }">←</button>
+        <button class="key down" aria-label="下に移動" @pointerdown.prevent="move('down')" @click="(event) => { if (event.detail === 0) move('down') }">↓</button>
+        <button class="key right" aria-label="右に移動" @pointerdown.prevent="move('right')" @click="(event) => { if (event.detail === 0) move('right') }">→</button>
       </div>
-      <div class="timer">
-        <span class="muted">残り時間</span>
-        <span class="timer-value">{{ mmss(remainingMs) }}</span>
-      </div>
-      <div class="progress"><span :style="{ width: `${progress * 100}%` }" /></div>
-
-      <div class="controls">
-        <div class="controls-head">
-          <span class="step">TAP TO MOVE</span>
-          <span class="muted tiny">長押し無効・連打で移動</span>
-        </div>
-        <div class="dpad" @contextmenu.prevent>
-          <button class="key up" :disabled="phase !== 'playing'" @pointerdown.prevent="move('up')">▲</button>
-          <button class="key left" :disabled="phase !== 'playing'" @pointerdown.prevent="move('left')">◀</button>
-          <button class="key down" :disabled="phase !== 'playing'" @pointerdown.prevent="move('down')">▼</button>
-          <button class="key right" :disabled="phase !== 'playing'" @pointerdown.prevent="move('right')">▶</button>
-        </div>
-      </div>
-    </aside>
-  </main>
-
-  <!-- 06 · タッチ成功 -->
-  <main v-else-if="endReason === 'caught'" class="screen center">
-    <span class="step">06 / TAG!</span>
-    <div class="result">
-      <span class="chip" style="color: var(--lime)">● TAG SUCCESS!</span>
-      <h1 class="touch">タッチ！</h1>
-      <div class="en">GOTCHA!</div>
-      <div class="impact">
-        <Mascot class="f-oni" color="var(--red)" :size="96" halo />
-        <Mascot class="f-runner" color="var(--cyan)" :size="74" halo />
-      </div>
-      <div class="panel result-panel">
-        <div class="muted detail">ROOM #{{ roomNo(roomId) }} • 鬼の勝利</div>
-        <div class="big-time">{{ mmssCs(elapsedMs) }}</div>
-        <div class="muted small">捕まえるまでにかかった時間</div>
-      </div>
-      <button class="btn btn-primary" @click="toRanking">ランキングを見る →</button>
     </div>
   </main>
 
-  <!-- 07 · タイムアップ -->
-  <main v-else-if="endReason === 'timeUp'" class="screen center">
-    <span class="step">07 / TIME UP</span>
-    <div class="result">
-      <span class="chip" style="color: var(--cyan)">● TIME LIMIT</span>
-      <h1 class="timeup">TIME UP!</h1>
-      <div class="muted sub">180秒が経過しました</div>
-      <div class="clock"><span>00:00</span></div>
-      <div class="panel result-panel">
-        <div class="victor">逃げ切り成功！</div>
-        <div class="muted">逃げ側の勝利 • 生存時間 {{ mmss(elapsedMs) }}</div>
-      </div>
-      <button class="btn btn-primary" @click="toRanking">ランキングを見る →</button>
-    </div>
+  <main v-else-if="endReason === 'caught' || endReason === 'timeUp'" class="screen result">
+    <header>
+      <span class="step">対戦結果 / #{{ roomNo(roomId) }}</span>
+      <h1>{{ endReason === 'caught' ? 'タッチ成功！' : '逃げ切り成功！' }}</h1>
+      <p class="page-description">{{ endReason === 'caught' ? '鬼が逃げをつかまえました。' : `制限時間の${durationMs / 1000}秒を逃げ切りました。` }}</p>
+    </header>
+    <section class="panel route-panel result-card" :style="{ '--winner-color': endReason === 'caught' ? 'var(--red)' : 'var(--cyan)' }">
+      <img class="route-art" :src="routeResult" alt="" />
+      <span class="chip winner">{{ endReason === 'caught' ? '▲ 鬼の勝利' : '◇ 逃げの勝利' }}</span>
+      <Mascot :color="endReason === 'caught' ? 'var(--red)' : 'var(--cyan)'" :size="148" />
+      <strong class="result-word">{{ endReason === 'caught' ? 'TAG!' : 'TIME UP' }}</strong>
+    </section>
+    <div class="panel result-record"><span class="muted">{{ endReason === 'caught' ? '捕まえるまでの時間' : '生存時間' }}</span><strong>{{ mmssCs(elapsedMs) }}</strong></div>
+    <div class="bottom-actions"><button class="btn btn-primary" @click="toRanking">ランキングを見る</button></div>
   </main>
 
-  <!-- 相手の切断 -->
-  <main v-else class="screen center">
-    <div class="notice">
-      <h1 class="title">相手が切断しました</h1>
-      <p class="muted">このゲームは記録されません。</p>
-      <button class="btn btn-primary" @click="leave">ゲームに戻る</button>
-    </div>
+  <main v-else class="screen notice">
+    <span class="step">対戦終了</span><h1>相手が切断しました</h1><p class="muted">このゲームは記録されません。</p>
+    <div class="bottom-actions"><button class="btn btn-primary" @click="leave">タイトルに戻る</button></div>
   </main>
 </template>
 
 <style scoped>
-.center {
-  align-items: center;
-}
-
-.center > .step {
-  align-self: flex-start;
-}
-
-.small {
-  font-size: 14px;
-}
-
-.tiny {
-  font-size: 12px;
-}
-
-.title {
-  margin: 0;
-  font-size: 44px;
-  line-height: 1.35;
-  text-align: center;
-}
-
-.matching,
-.notice {
-  flex: 1;
-  width: min(560px, 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
-  text-align: center;
-}
-
-/* レーダー */
-.radar {
-  position: relative;
-  width: 220px;
-  height: 220px;
-  display: grid;
-  place-items: center;
-}
-
-.ring {
-  position: absolute;
-  border-radius: 50%;
-  border: 1.6px solid var(--cyan);
-  background: rgb(120 232 240 / 4%);
-  animation: pulse 2.4s ease-out infinite;
-}
-
-.r1 {
-  inset: 0;
-}
-
-.r2 {
-  inset: 24px;
-  animation-delay: 0.3s;
-}
-
-.r3 {
-  inset: 48px;
-  animation-delay: 0.6s;
-}
-
-.beacon {
-  position: absolute;
-  top: 24px;
-  right: 22px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--lime);
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.45;
-  }
-}
-
-.match-card {
-  width: 100%;
-  padding: 24px;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 8px 16px;
-  align-items: center;
-  text-align: left;
-}
-
-.joined {
-  font-weight: 700;
-  font-size: 18px;
-}
-
-.track {
-  grid-column: 1 / -1;
-  height: 6px;
-  margin-top: 12px;
-  border-radius: 3px;
-  background: var(--bg);
-  overflow: hidden;
-}
-
-.bar {
-  display: block;
-  width: 40%;
-  height: 100%;
-  border-radius: 3px;
-  background: var(--lime);
-  animation: slide 1.6s ease-in-out infinite alternate;
-}
-
-@keyframes slide {
-  from {
-    transform: translateX(-20%);
-  }
-  to {
-    transform: translateX(170%);
-  }
-}
-
-/* プレイ画面 */
-.play {
-  flex-direction: row;
-  gap: 40px;
-  height: 100vh;
-  padding: 32px 40px;
-}
-
-.field {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  border-radius: 17px;
-  overflow: hidden;
-  background: var(--field);
-}
-
-.canvas-host {
-  position: absolute;
-  inset: 0;
-}
-
-.tap-effects {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.tap-effect {
-  position: absolute;
-  width: 44px;
-  height: 44px;
-  margin: -22px 0 0 -22px;
-  border: 2px solid currentColor;
-  border-radius: 50%;
-  box-shadow: 0 0 12px currentColor;
-  animation: tap-ripple 450ms ease-out forwards;
-}
-
-@keyframes tap-ripple {
-  from {
-    opacity: 0.9;
-    transform: scale(0.25);
-  }
-  to {
-    opacity: 0;
-    transform: scale(1.4);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tap-effect {
-    animation: tap-fade 120ms linear forwards;
-  }
-}
-
-@keyframes tap-fade {
-  from {
-    opacity: 0.9;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-.veil {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: rgb(16 23 40 / 70%);
-}
-
-.modal {
-  width: min(420px, 90%);
-  padding: 32px;
-  border-radius: 26px;
-  background: var(--panel);
-  border: 1.5px solid #4e617b;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  text-align: center;
-}
-
-.ready {
-  font-size: 48px;
-  font-weight: 700;
-}
-
-.count {
-  font-size: 120px;
-  line-height: 1;
-  font-weight: 700;
-  color: var(--lime);
-}
-
-.assign {
-  font-size: 24px;
-  font-weight: 700;
-}
-
-.hud {
-  width: 360px;
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.badges {
-  display: flex;
-  justify-content: space-between;
-}
-
-.timer {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-
-.timer-value {
-  font-size: 48px;
-  font-weight: 700;
-  color: var(--lime);
-  font-variant-numeric: tabular-nums;
-}
-
-.progress {
-  height: 6px;
-  border-radius: 3px;
-  background: var(--panel);
-  overflow: hidden;
-}
-
-.progress span {
-  display: block;
-  height: 100%;
-  background: var(--lime);
-  border-radius: 3px;
-}
-
-.controls {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.controls-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-
-.dpad {
-  display: grid;
-  grid-template-columns: repeat(3, 96px);
-  grid-template-rows: repeat(2, 96px);
-  gap: 10px;
-  justify-content: center;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.key {
-  border-radius: 20px;
-  background: var(--panel);
-  color: var(--text);
-  font-size: 22px;
-  font-weight: 700;
-  -webkit-touch-callout: none;
-}
-
-.key:active:not(:disabled) {
-  background: var(--lime);
-  color: var(--bg);
-}
-
-.key:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.up {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.left {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-.down {
-  grid-column: 2;
-  grid-row: 2;
-}
-
-.right {
-  grid-column: 3;
-  grid-row: 2;
-}
-
-/* 結果画面 */
-.result {
-  flex: 1;
-  width: min(560px, 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  text-align: center;
-}
-
-.touch {
-  margin: 0;
-  line-height: 1.1;
-  font-size: 80px;
-  color: var(--yellow);
-}
-
-.en {
-  font-size: 36px;
-  font-weight: 700;
-}
-
-.impact {
-  position: relative;
-  width: 210px;
-  height: 210px;
-  border-radius: 50%;
-  border: 2px solid var(--yellow);
-  background: rgb(255 227 122 / 7%);
-}
-
-.f-oni {
-  position: absolute;
-  left: 22px;
-  top: 34px;
-}
-
-.f-runner {
-  position: absolute;
-  right: 14px;
-  bottom: 30px;
-}
-
-.result-panel {
-  width: 100%;
-  padding: 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.detail {
-  font-weight: 700;
-}
-
-.big-time {
-  font-size: 44px;
-  font-weight: 700;
-  color: var(--lime);
-  font-variant-numeric: tabular-nums;
-}
-
-.timeup {
-  margin: 0;
-  line-height: 1.1;
-  font-size: 72px;
-}
-
-.sub {
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.clock {
-  width: 210px;
-  height: 210px;
-  border-radius: 50%;
-  border: 2px solid var(--cyan);
-  display: grid;
-  place-items: center;
-}
-
-.clock span {
-  width: 152px;
-  height: 152px;
-  border-radius: 50%;
-  background: var(--panel);
-  display: grid;
-  place-items: center;
-  font-size: 34px;
-  font-weight: 700;
-  color: var(--cyan);
-}
-
-.victor {
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--lime);
+.small { font-size: 13px; }
+.radar { position: relative; height: 300px; display: grid; place-items: center; margin-top: 6px; flex: none; }
+.ring { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.searching { position: absolute; top: 18px; left: 18px; color: var(--cyan); }
+.participants { display: grid; grid-template-columns: 1fr 1fr; padding: 16px; margin-top: 24px; min-height: 105px; border-radius: 16px; }
+.participants > div { min-width: 0; display: flex; flex-direction: column; gap: 12px; font-size: 13px; }
+.participants > div + div { border-left: 1px solid var(--edge); padding-left: 16px; }
+.participants strong { font-size: 18px; }
+.player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.joined { color: var(--cyan); }
+.occupancy { text-align: center; font-size: 14px; margin: 28px 0; }
+.ready-card { display: flex; flex-direction: column; align-items: center; min-height: 400px; padding: 18px 16px 40px; text-align: center; }
+.role-chip { align-self: flex-start; color: var(--role-color); }
+.ready-card .mascot { margin-top: 18px; }
+.count { font-size: 66px; font-weight: 900; color: var(--role-color); line-height: 1.2; }
+.ready-card p { font-size: 16px; margin: 16px 0; }
+.countdown-note { text-align: center; font-size: 15px; margin-top: auto; padding-top: 32px; }
+.play { gap: 18px; }
+.play.ready-phase { gap: 0; }
+.ready-phase .field { visibility: hidden; position: absolute; top: 190px; left: 24px; right: 24px; height: 400px; }
+.hud { display: flex; flex-direction: column; gap: 12px; }
+.badges, .timer { display: flex; justify-content: space-between; align-items: center; }
+.timer-value { font-size: 37px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.4; }
+.progress { height: 6px; border-radius: 3px; overflow: hidden; background: var(--border); }
+.progress span { display: block; height: 100%; background: var(--cyan); border-radius: 3px; transition: width .1s linear; }
+.field { position: relative; height: clamp(260px, 48svh, 450px); border-radius: 15px; overflow: hidden; background: var(--field); flex: none; }
+.canvas-host, .tap-effects { position: absolute; inset: 0; }
+.fog-label { position: absolute; left: 12px; top: 12px; font-size: 11px; pointer-events: none; }
+.tap-effects { pointer-events: none; }
+.tap-effect { position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; border: 2px solid currentColor; border-radius: 50%; box-shadow: 0 0 12px currentColor; animation: tap-ripple 450ms ease-out forwards; }
+@keyframes tap-ripple { from { opacity: .9; transform: scale(.25); } to { opacity: 0; transform: scale(1.4); } }
+.controls { display: flex; flex-direction: column; gap: 6px; }
+.controls > strong { font-size: 15px; }
+.dpad { display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(2, 60px); gap: 8px; justify-content: center; touch-action: none; user-select: none; -webkit-user-select: none; }
+.key { border-radius: 19px; border: 1px solid var(--edge); box-shadow: var(--raised); background: var(--panel); color: var(--text); font-size: 28px; font-weight: 700; -webkit-touch-callout: none; }
+.key:active { background: var(--lime); color: var(--bg); box-shadow: var(--inset); }
+.up { grid-column: 2; grid-row: 1; }.left { grid-column: 1; grid-row: 2; }.down { grid-column: 2; grid-row: 2; }.right { grid-column: 3; grid-row: 2; }
+.result-card { min-height: 324px; padding: 16px; display: flex; flex-direction: column; align-items: center; }
+.winner { align-self: flex-start; color: var(--winner-color); }
+.result-card .mascot { margin-top: 32px; }
+.result-word { color: var(--winner-color); font-size: 37px; font-weight: 900; margin-top: 12px; }
+.result-record { display: flex; flex-direction: column; align-items: center; gap: 10px; min-height: 133px; padding: 16px; margin-top: 24px; border-radius: 18px; font-size: 15px; }
+.result-record strong { font-size: 42px; line-height: 1.4; font-weight: 900; font-variant-numeric: tabular-nums; }
+@media (min-width: 900px) {
+  .play:not(.ready-phase) { width: min(100%, 1100px); display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-rows: auto 1fr; column-gap: 40px; height: 100svh; }
+  .play:not(.ready-phase) .field { grid-column: 1; grid-row: 1 / 3; height: 100%; min-height: 440px; }
+  .hud { grid-column: 2; grid-row: 1; }.controls { grid-column: 2; grid-row: 2; justify-content: end; padding-bottom: 8px; }
+  .dpad { grid-template-columns: repeat(3, 88px); grid-template-rows: repeat(2, 88px); gap: 12px; margin-top: 18px; }
 }
 </style>

@@ -15,6 +15,8 @@ const playing = ref(0)
 const waiting = ref(0)
 const total = ref(50)
 const filter = ref<Filter>('all')
+const connected = ref(false)
+const received = ref(false)
 
 let ws: WebSocket | null = null
 let reconnectTimer: number | undefined
@@ -25,11 +27,9 @@ const shown = computed(() => (filter.value === 'all' ? rooms.value : rooms.value
 const statusLabel: Record<RoomStatus, string> = { playing: '対戦中', waiting: '待機中', empty: '空室' }
 
 function pair(r: RoomView) {
-  return `${r.players[0] ?? '—'}  vs  ${r.players[1] ?? '—'}`
-}
-
-function state(r: RoomView) {
-  return `${statusLabel[r.status]}  •  ${r.status === 'playing' && r.remainingMs !== null ? mmss(r.remainingMs) : '—'}`
+  if (r.status === 'empty') return '参加者なし'
+  if (r.players.length < 2) return `${r.players[0] ?? '—'} ・ 1/2人`
+  return `${r.players[0]} vs ${r.players[1]}`
 }
 
 // サーバーが状態変化時と 1 秒ごとに一覧を push してくる。切れたら少し待って再接続する
@@ -38,12 +38,15 @@ function connect() {
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data) as ServerMsg
     if (msg.type !== 'rooms') return
+    connected.value = true
+    received.value = true
     rooms.value = msg.rooms
     playing.value = msg.playing
     waiting.value = msg.waiting
     total.value = msg.total
   }
   ws.onclose = () => {
+    connected.value = false
     if (alive) reconnectTimer = window.setTimeout(connect, RECONNECT_MS)
   }
 }
@@ -57,178 +60,53 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="screen">
-    <span class="step">09 / ROOM MONITOR</span>
-    <div class="head">
-      <div>
-        <h1>ルーム状況</h1>
-        <p class="muted">参加者と対戦状況をリアルタイム表示</p>
-      </div>
-      <div class="panel metrics">
-        <div class="metric">
-          <span class="v lime">{{ String(playing).padStart(2, '0') }}</span>
-          <span class="muted">プレイ中</span>
-        </div>
-        <span class="divider" />
-        <div class="metric">
-          <span class="v cyan">{{ String(waiting).padStart(2, '0') }}</span>
-          <span class="muted">待機中</span>
-        </div>
-        <span class="count">/ {{ total }}</span>
-      </div>
+  <main class="screen rooms">
+    <header>
+      <span class="step">ライブ状況</span>
+      <h1>ルーム一覧</h1>
+      <p class="page-description">最大{{ total }}ルーム ・ 2人対戦</p>
+    </header>
+    <div class="panel metrics" aria-label="ルーム稼働状況">
+      <div><strong class="cyan">{{ String(playing).padStart(2, '0') }}</strong><span>対戦中</span></div>
+      <div><strong class="lime">{{ String(waiting).padStart(2, '0') }}</strong><span>待機中</span></div>
+      <div><strong>{{ total }}</strong><span>最大</span></div>
     </div>
-
-    <div class="filters">
-      <button class="chip f" :class="{ on: filter === 'all' }" @click="filter = 'all'">すべて</button>
-      <button class="chip f" :class="{ on: filter === 'playing' }" @click="filter = 'playing'">プレイ中</button>
-      <button class="chip f" :class="{ on: filter === 'waiting' }" @click="filter = 'waiting'">待機中</button>
+    <div class="segments" role="group" aria-label="ルームの絞り込み">
+      <button class="segment" :class="{ on: filter === 'all' }" :aria-pressed="filter === 'all'" @click="filter = 'all'">すべて</button>
+      <button class="segment" :class="{ on: filter === 'playing' }" :aria-pressed="filter === 'playing'" @click="filter = 'playing'">対戦中</button>
+      <button class="segment" :class="{ on: filter === 'waiting' }" :aria-pressed="filter === 'waiting'" @click="filter = 'waiting'">待機中</button>
     </div>
-
-    <ul class="grid">
-      <li v-for="r in shown" :key="r.id" class="card" :class="r.status">
+    <p v-if="!connected" class="connection muted" role="status">{{ received ? '接続を確認しています。自動で再接続します。' : 'ルーム状況に接続しています…' }}</p>
+    <ul class="inset-list room-list" aria-label="ルーム一覧">
+      <li v-if="received && shown.length === 0" class="empty-state">{{ filter === 'all' ? 'ルームはありません' : filter === 'playing' ? '対戦中のルームはありません' : '待機中のルームはありません' }}</li>
+      <li v-for="r in shown" :key="r.id" class="room-row" :class="r.status">
         <span class="id">#{{ roomNo(r.id) }}</span>
-        <div>
-          <div class="pair">{{ pair(r) }}</div>
-          <div class="muted state">{{ state(r) }}</div>
-        </div>
+        <div class="room-details"><div class="pair">{{ pair(r) }}</div><div class="state">{{ statusLabel[r.status] }}</div></div>
+        <span v-if="r.status === 'playing' && r.remainingMs !== null" class="time">{{ mmss(r.remainingMs) }}</span>
       </li>
     </ul>
-
-    <footer class="foot">
-      <span class="muted">最大{{ total }}ルーム / {{ total * 2 }}人</span>
-      <button class="btn btn-primary" @click="router.push('/')">ゲームに戻る →</button>
-    </footer>
+    <footer class="bottom-actions"><button class="btn btn-secondary" @click="router.push('/')">タイトルに戻る</button></footer>
   </main>
 </template>
 
 <style scoped>
-.head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 32px;
-  margin: 16px 0 24px;
-}
-
-h1 {
-  margin: 0;
-  font-size: 40px;
-}
-
-.head p {
-  margin: 8px 0 0;
-}
-
-.metrics {
-  display: flex;
-  align-items: center;
-  gap: 40px;
-  padding: 20px 40px;
-  border-radius: 20px;
-}
-
-.metric {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: 13px;
-}
-
-.v {
-  font-size: 40px;
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.lime {
-  color: var(--lime);
-}
-
-.cyan {
-  color: var(--cyan);
-}
-
-.divider {
-  width: 1px;
-  height: 56px;
-  background: rgb(157 175 197 / 30%);
-}
-
-.count {
-  font-size: 24px;
-  font-weight: 700;
-}
-
-.filters {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.f {
-  color: var(--text);
-  min-width: 110px;
-  justify-content: center;
-}
-
-.f.on {
-  background: var(--lime);
-  color: var(--bg);
-}
-
-.grid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 10px;
-}
-
-.card {
-  display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: 16px;
-  align-items: center;
-  padding: 12px;
-  border-radius: 14px;
-  background: var(--panel);
-}
-
-.card.empty {
-  opacity: 0.6;
-}
-
-.id {
-  display: grid;
-  place-items: center;
-  height: 42px;
-  border-radius: 10px;
-  background: var(--panel-deep);
-  font-weight: 700;
-}
-
-.pair {
-  font-weight: 700;
-  white-space: pre;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.state {
-  font-size: 13px;
-  margin-top: 2px;
-  white-space: pre;
-}
-
-.foot {
-  margin-top: 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.foot .btn {
-  height: 54px;
-}
+.page-description { margin-bottom: 14px; }
+.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 10px 20px 16px; border-radius: 17px; margin-bottom: 15px; }
+.metrics > div { display: flex; flex-direction: column; gap: 6px; }
+.metrics > div:not(:first-child) { align-items: center; }
+.metrics strong { font-size: 29px; line-height: 42px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.metrics span { color: var(--muted); font-size: 14px; }
+.cyan { color: var(--cyan); }
+.lime { color: var(--lime); }
+.room-list { margin-top: 15px; max-height: 48svh; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.room-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 69px; border-bottom: 1px solid var(--edge); }
+.room-row:last-child { border: 0; }
+.id, .time { font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+.id { color: var(--muted); }
+.room-details { min-width: 0; }
+.pair { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.state { font-size: 13px; margin-top: 4px; color: var(--muted); }
+.playing .state { color: var(--cyan); }
+.waiting .state { color: var(--lime); }
+.connection { font-size: 13px; margin: 12px 0 0; }
 </style>
