@@ -24,8 +24,7 @@ function start() {
       <img class="route-art" :src="routeArt" alt="" />
       <span class="chip festival">KCS × 三田祭 2026</span>
       <h1><span>MITA</span><span class="oni">ONI</span></h1>
-      <p class="sub">三田の街で、鬼ごっこ。</p>
-      <p class="catch muted">迷路を駆けろ。つかまるな。</p>
+      <p class="sub">鬼ごっこ @三田キャンパス</p>
       <Mascot class="brand-oni" color="var(--red)" :size="68" />
       <Mascot class="brand-runner" color="var(--cyan)" :size="48" />
     </section>
@@ -35,8 +34,7 @@ function start() {
       <button class="btn btn-primary" type="submit" :disabled="!canStart">対戦をはじめる</button>
       <RouterLink class="btn btn-secondary" to="/how-to">遊び方</RouterLink>
       <RouterLink class="btn btn-secondary" to="/rooms">ルーム一覧</RouterLink>
-      <p class="muted support">2人対戦 ・ 1プレイ最大180秒</p>
-      <p class="muted credit">presented by <span class="kcs">KCS</span></p>
+      <p class="muted credit">presented by <span class="kcs">KCS</span> 2026 </p>
     </form>
   </main>
 </template>
@@ -48,13 +46,11 @@ function start() {
 h1 { display: flex; flex-direction: column; margin: 22px 0 28px; font-size: 68px; line-height: 1.03; font-weight: 900; letter-spacing: -.04em; }
 .oni { color: var(--lime); }
 .sub { font-size: 21px; font-weight: 700; margin: 0 0 16px; }
-.catch { font-size: 15px; margin: 0; }
 .brand-oni { position: absolute; right: 34px; top: 81px; }
 .brand-runner { position: absolute; right: 32px; top: 162px; }
 .entry { display: flex; flex-direction: column; margin-top: 26px; gap: 12px; }
 label { font-size: 16px; font-weight: 700; }
 input { width: 100%; min-height: 58px; padding: 14px 16px; margin: -4px 0 10px; border: 1px solid var(--edge); border-radius: 14px; background: var(--panel-deep); color: var(--text); caret-color: var(--lime); font-size: 19px; font-weight: 500; box-shadow: var(--inset); }
-.support { text-align: center; font-size: 14px; margin: 12px 0 0; }
 .credit { text-align: center; font-size: 12px; letter-spacing: .08em; margin: 4px 0 0; }
 .kcs { color: var(--lime); font-weight: 900; }
 @media (max-width: 359px) { .brand { padding-left: 14px; } .sub { font-size: 18px; } .brand-oni { right: 12px; } .brand-runner { right: 14px; } }
