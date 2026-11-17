@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { wsUrl } from '../lib/api'
 import PageNav from '../components/PageNav.vue'
 import { mmss, roomNo } from '../lib/format'
@@ -10,7 +9,6 @@ type Filter = 'all' | 'playing' | 'waiting'
 
 const RECONNECT_MS = 2000
 
-const router = useRouter()
 const rooms = ref<RoomView[]>([])
 const playing = ref(0)
 const waiting = ref(0)

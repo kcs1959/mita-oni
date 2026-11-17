@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { fetchRanking } from '../lib/api'
 import PageNav from '../components/PageNav.vue'
 import { mmssCs } from '../lib/format'
 import type { RankingResponse, Role } from '../lib/protocol'
-import { getName } from '../lib/session'
 
 const route = useRoute()
-const router = useRouter()
 
 // 自分の記録（直前のゲーム結果）。URL の ?role=&me= で受け取る
 const myRole = route.query.role === 'oni' ? 'oni' : route.query.role === 'runner' ? 'runner' : null
@@ -50,9 +48,6 @@ function next() {
   if (data.value) load(data.value.offset + data.value.limit)
 }
 
-function replay() {
-  router.push(getName() ? '/play' : '/')
-}
 </script>
 
 <template>
