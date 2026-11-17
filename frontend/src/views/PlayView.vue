@@ -281,7 +281,7 @@ onBeforeUnmount(() => {
     <span class="step">対戦ロビー</span>
     <h1>{{ phase === 'full' ? '満室です' : '接続が切れました' }}</h1>
     <p class="muted">{{ phase === 'full' ? '全てのルームが使用中です。しばらくしてからもう一度お試しください。' : 'もう一度はじめからお試しください。' }}</p>
-    <div class="bottom-actions"><button class="btn btn-primary" @click="leave">タイトルに戻る</button></div>
+    <div class="bottom-actions"><button class="btn btn-primary" @click="leave">ホームに戻る</button></div>
   </main>
 
   <main v-else-if="phase === 'ready' || phase === 'playing'" class="screen play" :class="{ 'ready-phase': phase === 'ready', 'touch-controls': mobileControls }">
@@ -339,7 +339,7 @@ onBeforeUnmount(() => {
     </header>
     <section class="panel route-panel result-card" :style="{ '--winner-color': endReason === 'caught' ? 'var(--red)' : 'var(--cyan)' }">
       <img class="route-art" :src="routeResult" alt="" />
-      <span class="chip winner">{{ endReason === 'caught' ? '▲ 鬼の勝利' : '◇ 逃げの勝利' }}</span>
+      <div class="result-badges"><span class="chip winner">{{ endReason === 'caught' ? '▲ 鬼の勝利' : '◇ 逃げの勝利' }}</span><span class="chip kcs-chip">KCS × 三田祭 2026</span></div>
       <Mascot :color="endReason === 'caught' ? 'var(--red)' : 'var(--cyan)'" :size="148" />
       <strong class="result-word">{{ endReason === 'caught' ? 'TAG!' : 'TIME UP' }}</strong>
     </section>
@@ -349,7 +349,7 @@ onBeforeUnmount(() => {
 
   <main v-else class="screen notice">
     <span class="step">対戦終了</span><h1>相手が切断しました</h1><p class="muted">このゲームは記録されません。</p>
-    <div class="bottom-actions"><button class="btn btn-primary" @click="leave">タイトルに戻る</button></div>
+    <div class="bottom-actions"><button class="btn btn-primary" @click="leave">ホームに戻る</button></div>
   </main>
 </template>
 
@@ -394,7 +394,9 @@ onBeforeUnmount(() => {
 .key:active { background: var(--lime); color: var(--bg); box-shadow: var(--inset); }
 .up { grid-column: 2; grid-row: 1; }.left { grid-column: 1; grid-row: 2; }.down { grid-column: 2; grid-row: 2; }.right { grid-column: 3; grid-row: 2; }
 .result-card { min-height: 324px; padding: 16px; display: flex; flex-direction: column; align-items: center; }
-.winner { align-self: flex-start; color: var(--winner-color); }
+.result-badges { align-self: stretch; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.winner { color: var(--winner-color); }
+.kcs-chip { color: var(--lime); }
 .result-card .mascot { margin-top: 32px; }
 .result-word { color: var(--winner-color); font-size: 37px; font-weight: 900; margin-top: 12px; }
 .result-record { display: flex; flex-direction: column; align-items: center; gap: 10px; min-height: 133px; padding: 16px; margin-top: 24px; border-radius: 18px; font-size: 15px; }
