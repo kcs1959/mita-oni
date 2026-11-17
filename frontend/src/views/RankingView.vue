@@ -61,7 +61,7 @@ function replay() {
     <header>
       <span class="step">対戦記録</span>
       <h1>ランキング</h1>
-      <p class="page-description">殿堂入り ・ 自分の順位と記録</p>
+      <p class="page-description">上位プレイヤーと自分の順位</p>
     </header>
     <div class="segments" role="group" aria-label="ランキングの役割">
       <button class="segment" :class="{ on: tab === 'oni' }" :aria-pressed="tab === 'oni'" @click="tab = 'oni'">プロ鬼</button>
@@ -70,7 +70,7 @@ function replay() {
     <div class="table-heading muted"><span>順位 / プレイヤー</span><span>{{ tab === 'oni' ? '捕獲タイム' : '生存時間' }}</span></div>
     <div v-if="error" class="inset-list empty-state" role="alert">
       <p>ランキングを読み込めませんでした。</p>
-      <button class="btn btn-secondary" @click="load()">もう一度読み込む</button>
+      <button class="btn btn-secondary" @click="load()">再読み込み</button>
     </div>
     <ol v-else-if="data" class="inset-list rows" aria-label="ランキング">
       <li v-if="data.entries.length === 0" class="empty-state">まだ記録がありません</li>
@@ -88,7 +88,7 @@ function replay() {
     </nav>
     <div class="bottom-actions">
       <button class="btn btn-secondary" @click="router.push('/rooms')">ルーム一覧</button>
-      <button class="btn btn-primary" @click="replay">もう一度あそぶ</button>
+      <button class="btn btn-primary" @click="replay">もう一度遊ぶ</button>
     </div>
   </main>
 </template>

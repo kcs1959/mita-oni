@@ -26,7 +26,7 @@ onBeforeUnmount(() => preview?.game.destroy(true))
     <div ref="canvasHost" class="map" role="img" aria-label="三田の迷路マップ。東京タワー、田町駅、三田二郎を目印に移動できます。" />
     <div class="legend"><span class="chip runner">◇ 逃げ</span><span class="chip oni">▲ 鬼</span><span class="chip muted">■ 壁</span></div>
     <p class="muted instructions">対戦中は自分の周囲だけが見えます。壁は通れません。<br />スマートフォン：盤面のスティックをスワイプして移動。指を離すと停止します。<br />パソコン：WASD・矢印キーの長押しで移動。方向ボタンは1回押すと1マス進みます。</p>
-    <footer class="bottom-actions"><RouterLink class="btn btn-secondary" to="/">タイトルに戻る</RouterLink></footer>
+    <footer class="bottom-actions"><RouterLink class="btn btn-secondary" to="/">ホームに戻る</RouterLink></footer>
   </main>
 </template>
 

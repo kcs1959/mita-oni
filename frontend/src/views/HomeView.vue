@@ -36,6 +36,7 @@ function start() {
       <RouterLink class="btn btn-secondary" to="/how-to">遊び方</RouterLink>
       <RouterLink class="btn btn-secondary" to="/rooms">ルーム一覧</RouterLink>
       <p class="muted support">2人対戦 ・ 1プレイ最大180秒</p>
+      <p class="muted credit">presented by <span class="kcs">KCS</span></p>
     </form>
   </main>
 </template>
@@ -54,5 +55,7 @@ h1 { display: flex; flex-direction: column; margin: 22px 0 28px; font-size: 68px
 label { font-size: 16px; font-weight: 700; }
 input { width: 100%; min-height: 58px; padding: 14px 16px; margin: -4px 0 10px; border: 1px solid var(--edge); border-radius: 14px; background: var(--panel-deep); color: var(--text); caret-color: var(--lime); font-size: 19px; font-weight: 500; box-shadow: var(--inset); }
 .support { text-align: center; font-size: 14px; margin: 12px 0 0; }
+.credit { text-align: center; font-size: 12px; letter-spacing: .08em; margin: 4px 0 0; }
+.kcs { color: var(--lime); font-weight: 900; }
 @media (max-width: 359px) { .brand { padding-left: 14px; } .sub { font-size: 18px; } .brand-oni { right: 12px; } .brand-runner { right: 14px; } }
 </style>
