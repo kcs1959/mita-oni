@@ -257,11 +257,7 @@ onBeforeUnmount(() => {
 
 <template>
   <main v-if="phase === 'connecting' || phase === 'matching'" class="screen matching">
-    <header>
-      <span class="step">対戦ロビー</span>
-      <h1>対戦相手を検索中</h1>
-      <p class="page-description">空いている2人用ルームに自動で入ります。</p>
-    </header>
+    <header><h1>対戦相手を検索中</h1></header>
     <div class="panel radar" role="status" aria-label="対戦相手を検索中">
       <span class="chip searching">検索中</span>
       <img class="ring" :src="radarOuter" width="234" height="234" alt="" />
@@ -274,7 +270,7 @@ onBeforeUnmount(() => {
       <div><strong>対戦相手</strong><span class="muted">参加を待っています</span></div>
     </div>
     <p class="occupancy muted">稼働中 {{ occupiedRooms }} / {{ totalRooms }} ルーム</p>
-    <div class="bottom-actions"><button class="btn btn-secondary" @click="leave">マッチングをキャンセル</button></div>
+    <div class="bottom-actions"><button class="btn btn-secondary" @click="leave">キャンセル</button></div>
   </main>
 
   <main v-else-if="phase === 'full' || phase === 'error'" class="screen notice">
@@ -287,7 +283,7 @@ onBeforeUnmount(() => {
   <main v-else-if="phase === 'ready' || phase === 'playing'" class="screen play" :class="{ 'ready-phase': phase === 'ready', 'touch-controls': mobileControls }">
     <template v-if="phase === 'ready'">
       <header>
-        <span class="step">ルーム #{{ roomNo(roomId) }}</span>
+        <span class="step">room {{ roomNo(roomId) }}</span>
         <h1>対戦準備</h1>
         <p class="page-description">2人そろいました。相手：{{ opponent }}</p>
       </header>
@@ -333,7 +329,7 @@ onBeforeUnmount(() => {
 
   <main v-else-if="endReason === 'caught' || endReason === 'timeUp'" class="screen result">
     <header>
-      <span class="step">対戦結果 / #{{ roomNo(roomId) }}</span>
+      <span class="step">room {{ roomNo(roomId) }}</span>
       <h1>{{ endReason === 'caught' ? 'タッチ成功！' : '逃げ切り成功！' }}</h1>
       <p class="page-description">{{ endReason === 'caught' ? '鬼が逃げをつかまえました。' : `制限時間の${durationMs / 1000}秒を逃げ切りました。` }}</p>
     </header>
