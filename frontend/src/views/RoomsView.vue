@@ -63,15 +63,11 @@ onBeforeUnmount(() => {
 <template>
   <main class="screen rooms">
     <PageNav />
-    <header>
-      <span class="step">ライブ状況</span>
-      <h1>ルーム一覧</h1>
-      <p class="page-description">最大{{ total }}ルーム ・ 2人対戦</p>
-    </header>
+    <header><h1>ルーム一覧</h1></header>
     <div class="panel metrics" aria-label="ルーム稼働状況">
       <div><strong class="cyan">{{ String(playing).padStart(2, '0') }}</strong><span>対戦中</span></div>
       <div><strong class="lime">{{ String(waiting).padStart(2, '0') }}</strong><span>待機中</span></div>
-      <div><strong>{{ total }}</strong><span>最大</span></div>
+      <div><strong>/{{ total }}</strong><span>ルーム</span></div>
     </div>
     <div class="segments" role="group" aria-label="ルームの絞り込み">
       <button class="segment" :class="{ on: filter === 'all' }" :aria-pressed="filter === 'all'" @click="filter = 'all'">すべて</button>
