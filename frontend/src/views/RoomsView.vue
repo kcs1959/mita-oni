@@ -83,7 +83,7 @@ onBeforeUnmount(() => {
         <span v-if="r.status === 'playing' && r.remainingMs !== null" class="time">{{ mmss(r.remainingMs) }}</span>
       </li>
     </ul>
-    <footer class="bottom-actions"><button class="btn btn-secondary" @click="router.push('/')">ホームに戻る</button></footer>
+    <footer class="bottom-actions"><RouterLink class="btn btn-secondary" to="/">ホームに戻る</RouterLink></footer>
   </main>
 </template>
 

@@ -58,16 +58,12 @@ function replay() {
 <template>
   <main class="screen ranking">
     <PageNav />
-    <header>
-      <span class="step">対戦記録</span>
-      <h1>ランキング</h1>
-      <p class="page-description">上位プレイヤーと自分の順位</p>
-    </header>
+    <header><h1>ランキング</h1></header>
     <div class="segments" role="group" aria-label="ランキングの役割">
       <button class="segment" :class="{ on: tab === 'oni' }" :aria-pressed="tab === 'oni'" @click="tab = 'oni'">プロ鬼</button>
       <button class="segment" :class="{ on: tab === 'runner' }" :aria-pressed="tab === 'runner'" @click="tab = 'runner'">プロ逃げ</button>
     </div>
-    <div class="table-heading muted"><span>順位 / プレイヤー</span><span>{{ tab === 'oni' ? '捕獲タイム' : '生存時間' }}</span></div>
+    <div class="table-heading muted"><span>順位 / プレイヤー</span><span>{{ tab === 'oni' ? '捕まえるまでの時間' : '生き残った時間' }}</span></div>
     <div v-if="error" class="inset-list empty-state" role="alert">
       <p>ランキングを読み込めませんでした。</p>
       <button class="btn btn-secondary" @click="load()">再読み込み</button>
@@ -86,10 +82,7 @@ function replay() {
       <button class="link" :disabled="!hasPrev" @click="prev">‹ 前の7人</button>
       <button class="link" :disabled="!hasNext" @click="next">次の7人 ›</button>
     </nav>
-    <div class="bottom-actions">
-      <button class="btn btn-secondary" @click="router.push('/rooms')">ルーム一覧</button>
-      <button class="btn btn-primary" @click="replay">もう一度遊ぶ</button>
-    </div>
+    <footer class="bottom-actions"><RouterLink class="btn btn-secondary" to="/">ホームに戻る</RouterLink></footer>
   </main>
 </template>
 

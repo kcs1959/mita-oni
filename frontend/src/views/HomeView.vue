@@ -32,8 +32,6 @@ function start() {
       <label for="player-name">プレイヤー名</label>
       <input id="player-name" v-model="name" maxlength="12" autocomplete="nickname" placeholder="なまえ" />
       <button class="btn btn-primary" type="submit" :disabled="!canStart">対戦をはじめる</button>
-      <RouterLink class="btn btn-secondary" to="/how-to">遊び方</RouterLink>
-      <RouterLink class="btn btn-secondary" to="/rooms">ルーム一覧</RouterLink>
       <p class="muted credit">presented by <span class="kcs">KCS</span> 2026 </p>
     </form>
   </main>
