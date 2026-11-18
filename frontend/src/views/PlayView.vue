@@ -53,6 +53,8 @@ const MOVE_INTERVAL_MS = 120
 
 const roleColor = computed(() => (role.value === 'oni' ? 'var(--red)' : 'var(--cyan)'))
 const progress = computed(() => Math.max(0, Math.min(1, remainingMs.value / durationMs.value)))
+// 鬼は捕まえたら勝ち、逃げは時間切れまで逃げ切ったら勝ち。
+const isWin = computed(() => (endReason.value === 'caught') === (role.value === 'oni'))
 
 function send(msg: ClientMsg) {
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg))
@@ -330,7 +332,10 @@ onBeforeUnmount(() => {
   <main v-else-if="endReason === 'caught' || endReason === 'timeUp'" class="screen result">
     <header>
       <span class="step">room {{ roomNo(roomId) }}</span>
-      <h1>{{ endReason === 'caught' ? 'タッチ成功！' : '逃げ切り成功！' }}</h1>
+      <h1 class="result-title">
+        {{ isWin ? 'Win!' : 'Lose...' }}
+        <small>{{ isWin ? 'あなたの勝ち' : 'あなたの負け' }}</small>
+      </h1>
       <p class="page-description">{{ endReason === 'caught' ? '鬼が逃げをつかまえました。' : `制限時間の${durationMs / 1000}秒を逃げ切りました。` }}</p>
     </header>
     <section class="panel route-panel result-card" :style="{ '--winner-color': endReason === 'caught' ? 'var(--red)' : 'var(--cyan)' }">
@@ -389,6 +394,8 @@ onBeforeUnmount(() => {
 .key { border-radius: 19px; border: 1px solid var(--edge); box-shadow: var(--raised); background: var(--panel); color: var(--text); font-size: 28px; font-weight: 700; -webkit-touch-callout: none; }
 .key:active { background: var(--lime); color: var(--bg); box-shadow: var(--inset); }
 .up { grid-column: 2; grid-row: 1; }.left { grid-column: 1; grid-row: 2; }.down { grid-column: 2; grid-row: 2; }.right { grid-column: 3; grid-row: 2; }
+.result-title { font-size: 56px; line-height: 1.1; }
+.result-title small { display: block; margin-top: 8px; font-size: 15px; font-weight: 700; }
 .result-card { min-height: 324px; padding: 16px; display: flex; flex-direction: column; align-items: center; }
 .result-badges { align-self: stretch; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .winner { color: var(--winner-color); }
