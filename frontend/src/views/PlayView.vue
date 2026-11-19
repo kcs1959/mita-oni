@@ -52,6 +52,7 @@ const KEY_DIRECTIONS: Record<string, Dir> = {
 const MOVE_INTERVAL_MS = 120
 
 const roleColor = computed(() => (role.value === 'oni' ? 'var(--red)' : 'var(--cyan)'))
+const roleLabel = computed(() => (role.value === 'oni' ? '鬼' : '逃げ'))
 const progress = computed(() => Math.max(0, Math.min(1, remainingMs.value / durationMs.value)))
 // 鬼は捕まえたら勝ち、逃げは時間切れまで逃げ切ったら勝ち。
 const isWin = computed(() => (endReason.value === 'caught') === (role.value === 'oni'))
@@ -291,7 +292,7 @@ onBeforeUnmount(() => {
       </header>
       <section class="panel route-panel ready-card" :style="{ '--role-color': roleColor }">
         <img class="route-art" :src="routeReady" alt="" />
-        <span class="chip role-chip">あなたの役割 ・ {{ role === 'oni' ? '鬼' : '逃げ' }}</span>
+        <span class="chip role-chip">あなたの役割 ・ {{ roleLabel }}</span>
         <Mascot :color="roleColor" :size="106" />
         <div class="count" role="status" aria-live="polite">{{ countdown }}</div>
         <p>{{ role === 'oni' ? '逃げをできるだけ早くつかまえよう。' : `鬼につかまらず、${durationMs / 1000}秒逃げ切ろう。` }}</p>
@@ -301,8 +302,20 @@ onBeforeUnmount(() => {
     </template>
 
     <div v-if="phase === 'playing'" class="hud">
-      <div class="badges"><span class="chip" :style="{ color: roleColor }">{{ role === 'oni' ? '▲ 鬼' : '◇ 逃げ' }}</span><span class="muted small">ルーム #{{ roomNo(roomId) }}</span></div>
-      <div class="timer"><strong>残り時間</strong><span class="timer-value">{{ mmss(remainingMs) }}</span></div>
+      <div class="hud-header">
+        <div class="player-role" :style="{ '--role-color': roleColor }">
+          <Mascot :color="roleColor" :size="32" />
+          <div class="role-text">
+            <span class="small">あなたの役割</span>
+            <strong>{{ roleLabel }}</strong>
+          </div>
+        </div>
+        <div class="timer">
+          <span class="muted small">ルーム #{{ roomNo(roomId) }}</span>
+          <strong class="small">残り時間</strong>
+          <span class="timer-value">{{ mmss(remainingMs) }}</span>
+        </div>
+      </div>
       <div class="progress" role="progressbar" aria-label="残り時間" :aria-valuenow="Math.ceil(remainingMs / 1000)" :aria-valuemax="durationMs / 1000" :aria-valuemin="0"><span :style="{ width: `${progress * 100}%` }" /></div>
     </div>
     <section class="field" aria-label="対戦マップ" @pointerdown="showTap">
@@ -376,8 +389,22 @@ onBeforeUnmount(() => {
 .play.ready-phase { gap: 0; }
 .ready-phase .field { visibility: hidden; position: absolute; top: 190px; left: 24px; right: 24px; height: 400px; }
 .hud { display: flex; flex-direction: column; gap: 12px; }
-.badges, .timer { display: flex; justify-content: space-between; align-items: center; }
-.timer-value { font-size: 37px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.4; }
+.hud-header { display: flex; justify-content: space-between; align-items: stretch; gap: 8px; }
+.player-role {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--role-color);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--role-color) 12%, var(--panel-deep));
+  color: var(--role-color);
+}
+.role-text, .timer { display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.role-text { white-space: nowrap; }
+.role-text strong { font-size: 32px; font-weight: 900; line-height: 1.1; }
+.timer { align-items: flex-end; white-space: nowrap; }
+.timer-value { font-size: 37px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.05; }
 .progress { height: 6px; border-radius: 3px; overflow: hidden; background: var(--border); }
 .progress span { display: block; height: 100%; background: var(--cyan); border-radius: 3px; transition: width .1s linear; }
 .field { position: relative; height: clamp(260px, 48svh, 450px); border-radius: 15px; overflow: hidden; background: var(--field); flex: none; }
