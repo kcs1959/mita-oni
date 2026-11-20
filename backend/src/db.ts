@@ -22,16 +22,25 @@ export async function countPlayers(db: D1Database, isOni: boolean): Promise<numb
   return row?.c ?? 0
 }
 
-/** 並び順は (play_time_ms, id) の昇順。同タイムは先に記録した人が上。役割が違えば null */
+/**
+ * 並び順: 鬼はタッチまでが短いほど上（昇順）、逃げは逃げた時間が長いほど上（降順）。
+ * 同タイムはどちらも先に記録した人（id が小さい方）が上
+ */
+function timeOrder(isOni: boolean): 'ASC' | 'DESC' {
+  return isOni ? 'ASC' : 'DESC'
+}
+
+/** 役割が違えば null */
 export async function rankOf(db: D1Database, id: number, isOni: boolean): Promise<number | null> {
   const me = await db
     .prepare('SELECT play_time_ms AS t FROM players WHERE id = ?1 AND is_oni = ?2')
     .bind(id, isOni ? 1 : 0)
     .first<{ t: number }>()
   if (!me) return null
+  const better = timeOrder(isOni) === 'ASC' ? '<' : '>'
   const before = await db
     .prepare(
-      'SELECT COUNT(*) AS c FROM players WHERE is_oni = ?1 AND (play_time_ms < ?2 OR (play_time_ms = ?2 AND id < ?3))',
+      `SELECT COUNT(*) AS c FROM players WHERE is_oni = ?1 AND (play_time_ms ${better} ?2 OR (play_time_ms = ?2 AND id < ?3))`,
     )
     .bind(isOni ? 1 : 0, me.t, id)
     .first<{ c: number }>()
@@ -41,7 +50,7 @@ export async function rankOf(db: D1Database, id: number, isOni: boolean): Promis
 export async function page(db: D1Database, isOni: boolean, offset: number, limit: number): Promise<RankingEntry[]> {
   const { results } = await db
     .prepare(
-      'SELECT id, name, play_time_ms AS playTimeMs FROM players WHERE is_oni = ?1 ORDER BY play_time_ms ASC, id ASC LIMIT ?2 OFFSET ?3',
+      `SELECT id, name, play_time_ms AS playTimeMs FROM players WHERE is_oni = ?1 ORDER BY play_time_ms ${timeOrder(isOni)}, id ASC LIMIT ?2 OFFSET ?3`,
     )
     .bind(isOni ? 1 : 0, limit, offset)
     .all<RankingEntry>()

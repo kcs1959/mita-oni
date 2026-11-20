@@ -72,7 +72,7 @@ function next() {
       </li>
     </ol>
     <p v-else class="inset-list empty-state" role="status">ランキングを読み込んでいます…</p>
-    <p v-if="data" class="page-label muted">{{ pageLabel }} ・ プレイ時間が短い順</p>
+    <p v-if="data" class="page-label muted">{{ pageLabel }} ・ {{ tab === 'oni' ? 'プレイ時間が短い順' : 'プレイ時間が長い順' }}</p>
     <nav v-if="data && (hasPrev || hasNext)" class="pager" aria-label="ランキングのページ">
       <button class="link" :disabled="!hasPrev" @click="prev">‹ 前の7人</button>
       <button class="link" :disabled="!hasNext" @click="next">次の7人 ›</button>

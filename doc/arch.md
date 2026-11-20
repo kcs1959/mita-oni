@@ -47,7 +47,7 @@
 
 ## D1
 
-`players(id, name, play_time_ms, is_oni)`。ランキングは `is_oni` ごとに `(play_time_ms, id)` 昇順。
+`players(id, name, play_time_ms, is_oni)`。ランキングは `is_oni` ごとで、鬼は `play_time_ms` 昇順・逃げは `play_time_ms` 降順（同タイムは `id` 昇順）。
 
 ## DO の分担
 
